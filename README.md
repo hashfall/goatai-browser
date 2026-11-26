@@ -43,5 +43,7 @@ treat_warnings_as_errors = false
 - [x] primeiro build do `chrome`
 - [x] primeira execução validada (headless e headful no niri)
 - [x] branding Goatai (nome, ícones 1x/2x, NTP, strings, `.info`)
+- [x] tema roxo/rosa (frame, toolbar, abas, NTP, Material primary/secondary)
+- [x] abas verticais estilo Zen/Arc (recolhida por padrão, expande no hover)
 - [ ] instalação empacotada (`.desktop`, AppImage/deb)
 - [ ] ajustes de UX do NTP (wallpaper / atalhos)
