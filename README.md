@@ -40,6 +40,8 @@ treat_warnings_as_errors = false
 
 - [x] depot_tools + checkout `--no-history`
 - [x] hooks (`gclient runhooks`)
-- [ ] primeiro build do `chrome`
-- [ ] primeira execução validada
-- [ ] branding GoatAI (nome, ícone, new tab page)
+- [x] primeiro build do `chrome`
+- [x] primeira execução validada (headless e headful no niri)
+- [x] branding Goatai (nome, ícones 1x/2x, NTP, strings, `.info`)
+- [ ] instalação empacotada (`.desktop`, AppImage/deb)
+- [ ] ajustes de UX do NTP (wallpaper / atalhos)

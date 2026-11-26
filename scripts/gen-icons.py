@@ -39,22 +39,29 @@ for s in (16, 22, 24, 32, 48, 64, 128, 256, 512):
     square(s).save(OUT / f"product_logo_{s}.png")
 
 
-# 2) Wordmark 97x22 (ícone + "Goatai"), versão normal e branca.
-def wordmark(color: tuple[int, int, int, int], path: Path) -> None:
-    H = 22
-    canvas = Image.new("RGBA", (97, H), (0, 0, 0, 0))
-    icon = square(20, pad=1.0)
-    canvas.alpha_composite(icon, (0, 1))
-    font = ImageFont.truetype("/usr/share/fonts/TTF/DejaVuSans-Bold.ttf", 16)
+# 2) Wordmark 97x22 (ícone + "Goatai"), versão normal e branca (1x e 2x).
+def wordmark(color: tuple[int, int, int, int], path: Path, scale: int = 1) -> None:
+    W, H = 97 * scale, 22 * scale
+    canvas = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    icon = square(20 * scale, pad=1.0)
+    canvas.alpha_composite(icon, (0, scale))
+    font = ImageFont.truetype("/usr/share/fonts/TTF/DejaVuSans-Bold.ttf", 16 * scale)
     d = ImageDraw.Draw(canvas)
     bbox = d.textbbox((0, 0), "Goatai", font=font)
-    tx, ty = 22, (H - (bbox[3] - bbox[1])) // 2 - bbox[1]
+    tx, ty = 22 * scale, (H - (bbox[3] - bbox[1])) // 2 - bbox[1]
     d.text((tx, ty), "Goatai", font=font, fill=color)
     canvas.save(path)
 
 
 wordmark((32, 33, 36, 255), OUT / "product_logo_name_22.png")
 wordmark((255, 255, 255, 255), OUT / "product_logo_name_22_white.png")
+
+OUT2 = OUT / "2x"
+OUT2.mkdir(exist_ok=True)
+square(32).save(OUT2 / "product_logo_16.png")
+square(64).save(OUT2 / "product_logo_32.png")
+wordmark((32, 33, 36, 255), OUT2 / "product_logo_name_22.png", 2)
+wordmark((255, 255, 255, 255), OUT2 / "product_logo_name_22_white.png", 2)
 
 # 3) Mono (silhueta branca) e XPM para Linux.
 mono = square(22, pad=1.0)
