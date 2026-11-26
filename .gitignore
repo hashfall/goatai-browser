@@ -1,0 +1,20 @@
+# Upstream Chromium checkout (gerenciado por depot_tools)
+/src/
+/depot_tools/
+/.gclient
+/.gclient_entries
+/.gclient_previous_sync_commits
+
+# Build e execução
+/out/
+/.run/
+*.log
+
+# Metadados do depot_tools na raiz
+/.cipd/
+/.gcs_entries
+/.gclient_entries
+/.gclient_previous_sync_commits
+
+# Ferramentas locais
+/.cache/
