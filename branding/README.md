@@ -96,3 +96,10 @@ CompleteDrag/RevertDrag/destrutor.
 `GoataiTabDragChip::Hide()` usava `raw_ptr` para o chip e o liberava **depois**
 de `RemoveChildViewT` (dangling raw_ptr → SIGTRAP). Agora usa
 `views::ViewTracker` e identifica o WebContents por `uintptr_t`.
+
+### Drag: sem destaque (Wayland)
+
+`ShouldDragWindowUsingSystemDnD()` fica **false** de propósito: no Wayland,
+arrastar a única aba (ou todas) entrava no system DnD e destacava uma janela.
+O clamp em `ContinueDragging` mantém o drag na strip. "Move to new window"
+continua no menu de contexto da aba.
