@@ -7,6 +7,7 @@
 #include <memory>
 
 #include "base/memory/raw_ptr.h"
+#include "ui/views/view_tracker.h"
 
 namespace content {
 class WebContents;
@@ -35,9 +36,8 @@ class GoataiTabDragChip {
 
  private:
 
-  raw_ptr<views::View> host_ = nullptr;
-  raw_ptr<views::View> chip_ = nullptr;
-  raw_ptr<content::WebContents> contents_ = nullptr;
+  views::ViewTracker chip_tracker_;
+  uintptr_t contents_id_ = 0;
 };
 
 #endif  // CHROME_BROWSER_UI_VIEWS_FRAME_GOATAI_TAB_DRAG_CHIP_H_

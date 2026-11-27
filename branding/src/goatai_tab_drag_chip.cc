@@ -72,47 +72,54 @@ void GoataiTabDragChip::Show(views::Widget* parent_widget,
     return;
   }
 
-  if (!chip_) {
+  if (!chip_tracker_.view()) {
     std::unique_ptr<views::View> chip = std::make_unique<ChipView>();
-    chip_ = browser_view->AddChildView(std::move(chip));
-    chip_->SetProperty(views::kViewIgnoredByLayoutKey, true);
-    chip_->SetPaintToLayer();
-    chip_->SetVisible(false);
+    views::View* chip_ptr = browser_view->AddChildView(std::move(chip));
+    chip_tracker_.SetView(chip_ptr);
+    chip_ptr->SetProperty(views::kViewIgnoredByLayoutKey, true);
+    chip_ptr->SetPaintToLayer();
+    chip_ptr->SetVisible(false);
   }
 
-  if (contents != contents_) {
-    contents_ = contents;
-    if (contents) {
-      if (auto* driver =
-              favicon::ContentFaviconDriver::FromWebContents(contents)) {
-        static_cast<ChipView*>(chip_.get())->SetFavicon(driver->GetFavicon());
-      } else {
-        static_cast<ChipView*>(chip_.get())->SetFavicon(gfx::Image());
+  const uintptr_t contents_id = reinterpret_cast<uintptr_t>(contents);
+  if (contents_id != contents_id_) {
+    contents_id_ = contents_id;
+    if (auto* chip = static_cast<ChipView*>(chip_tracker_.view())) {
+      if (contents) {
+        if (auto* driver =
+                favicon::ContentFaviconDriver::FromWebContents(contents)) {
+          chip->SetFavicon(driver->GetFavicon());
+        } else {
+          chip->SetFavicon(gfx::Image());
+        }
       }
     }
   }
 
   MoveTo(screen_point);
-  chip_->SetVisible(true);
+  if (auto* chip = chip_tracker_.view()) {
+    chip->SetVisible(true);
+  }
 }
 
 void GoataiTabDragChip::MoveTo(const gfx::Point& screen_point) {
-  if (!chip_ || !chip_->parent()) {
+  views::View* chip = chip_tracker_.view();
+  if (!chip || !chip->parent()) {
     return;
   }
   gfx::Point local = screen_point;
-  views::View::ConvertPointFromScreen(chip_->parent(), &local);
-  chip_->SetBounds(local.x() + kChipOffset, local.y() + kChipOffset, kChipSize,
-                   kChipSize);
+  views::View::ConvertPointFromScreen(chip->parent(), &local);
+  chip->SetBounds(local.x() + kChipOffset, local.y() + kChipOffset, kChipSize,
+                  kChipSize);
 }
 
 void GoataiTabDragChip::Hide() {
-  contents_ = nullptr;
-  if (chip_) {
-    if (views::View* parent = chip_->parent()) {
-      parent->RemoveChildViewT(chip_);
+  contents_id_ = 0;
+  views::View* chip = chip_tracker_.view();
+  chip_tracker_.SetView(nullptr);
+  if (chip) {
+    if (views::View* parent = chip->parent()) {
+      parent->RemoveChildViewT(chip);
     }
-    chip_ = nullptr;
   }
-  host_ = nullptr;
 }

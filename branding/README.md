@@ -90,3 +90,9 @@ abre o site. Fecha ao perder foco.
 seguindo o cursor durante qualquer arrasto de aba (view filha do BrowserView,
 `kViewIgnoredByLayoutKey`). Mostrado em `ContinueDragging` e escondido em
 CompleteDrag/RevertDrag/destrutor.
+
+### Fix do crash ao soltar no folder
+
+`GoataiTabDragChip::Hide()` usava `raw_ptr` para o chip e o liberava **depois**
+de `RemoveChildViewT` (dangling raw_ptr → SIGTRAP). Agora usa
+`views::ViewTracker` e identifica o WebContents por `uintptr_t`.
