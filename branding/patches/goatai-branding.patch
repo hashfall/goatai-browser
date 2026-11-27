@@ -1,3 +1,17 @@
+diff --git a/base/version_info/nix/version_extra_utils.cc b/base/version_info/nix/version_extra_utils.cc
+index bbdbe3a74c..3708ab2624 100644
+--- a/base/version_info/nix/version_extra_utils.cc
++++ b/base/version_info/nix/version_extra_utils.cc
+@@ -116,7 +116,8 @@ std::string GetDesktopName(base::Environment& env) {
+   if (!name.empty()) {
+     return name;
+   }
+-  return "chromium-browser.desktop";
++  // Goatai: desktop/app id padrão do produto.
++  return "goatai.desktop";
+ #endif
+ }
+ 
 diff --git a/chrome/BUILD.gn b/chrome/BUILD.gn
 index 6149578b26..0e5bec2e9a 100644
 --- a/chrome/BUILD.gn
@@ -15854,6 +15868,30 @@ index 138f08a9ff..d830bd595d 100644
    --toolbar-chip-collapsed-padding-start: 0px;
    --toolbar-chip-collapsed-padding-end: 0px;
    --toolbar-chip-padding-start: 0px;
+diff --git a/chrome/browser/shell_integration_linux.cc b/chrome/browser/shell_integration_linux.cc
+index 693ef04ab2..c48c2ac221 100644
+--- a/chrome/browser/shell_integration_linux.cc
++++ b/chrome/browser/shell_integration_linux.cc
+@@ -562,16 +562,9 @@ std::string GetProgramClassClass(const base::CommandLine& command_line,
+                                  const std::string& desktop_file_name) {
+   if (command_line.HasSwitch(switches::kWmClass))
+     return command_line.GetSwitchValueASCII(switches::kWmClass);
+-  std::string desktop_base_name = GetDesktopBaseName(desktop_file_name);
+-  if (auto* platform_utils =
+-          ui::OzonePlatform::GetInstance()->GetPlatformUtils()) {
+-    return platform_utils->GetWmWindowClass(desktop_base_name);
+-  }
+-  if (!desktop_base_name.empty()) {
+-    // Capitalize the first character like gtk does.
+-    desktop_base_name[0] = base::ToUpperASCII(desktop_base_name[0]);
+-  }
+-  return desktop_base_name;
++  // Goatai: app id / WM_CLASS em minúsculas, igual ao nome do .desktop
++  // (ex.: "goatai"), sem a capitalização automática do GTK.
++  return GetDesktopBaseName(desktop_file_name);
+ }
+ 
+ std::string GetProgramClassClassForDesktopId(
 diff --git a/chrome/browser/ui/color/BUILD.gn b/chrome/browser/ui/color/BUILD.gn
 index 9899d84c43..af7a949f9f 100644
 --- a/chrome/browser/ui/color/BUILD.gn
