@@ -665,7 +665,9 @@ void VerticalTabStripFolderBar::ShowContextMenuForViewImpl(
 
 void VerticalTabStripFolderBar::BookmarkModelLoaded(bool ids_reassigned) {
   root_ = nullptr;
-  Rebuild();
+  // Adicionar nós durante o callback de load viola checks do
+  // BookmarkMergedSurfaceService; agenda para depois do load.
+  ScheduleRebuild();
 }
 
 void VerticalTabStripFolderBar::BookmarkModelBeingDeleted() {

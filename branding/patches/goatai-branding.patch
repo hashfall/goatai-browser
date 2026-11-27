@@ -15892,10 +15892,10 @@ index fac2f4211e..0185c90e19 100644
    ]
 diff --git a/chrome/browser/ui/views/frame/vertical_tab_strip_folder_bar.cc b/chrome/browser/ui/views/frame/vertical_tab_strip_folder_bar.cc
 new file mode 100644
-index 0000000000..af6385ed98
+index 0000000000..6bd89f914e
 --- /dev/null
 +++ b/chrome/browser/ui/views/frame/vertical_tab_strip_folder_bar.cc
-@@ -0,0 +1,721 @@
+@@ -0,0 +1,723 @@
 +// Copyright 2026 Goatai. All rights reserved.
 +// Use of this source code is governed by a BSD-style license.
 +
@@ -16563,7 +16563,9 @@ index 0000000000..af6385ed98
 +
 +void VerticalTabStripFolderBar::BookmarkModelLoaded(bool ids_reassigned) {
 +  root_ = nullptr;
-+  Rebuild();
++  // Adicionar nós durante o callback de load viola checks do
++  // BookmarkMergedSurfaceService; agenda para depois do load.
++  ScheduleRebuild();
 +}
 +
 +void VerticalTabStripFolderBar::BookmarkModelBeingDeleted() {
