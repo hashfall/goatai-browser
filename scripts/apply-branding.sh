@@ -298,6 +298,16 @@ if "folder_bar_ = folder_bar.get();" not in t:
         "      std::unique_ptr<views::View>(std::move(folder_bar)), 0);\n"
         "  folder_bar_->SetProperty(\n"
         "      views::kMarginsKey, gfx::Insets::VH(0, region_horizontal_padding));\n")
+if "Goatai: folders/pins acompanham" not in t:
+    t = t.replace(
+        "void VerticalTabStripRegionView::AnimateExpandOnHover(bool expand) {\n"
+        "  is_expanded_on_hover_ = expand;\n  ResetExpandOnHoverTimers();\n",
+        "void VerticalTabStripRegionView::AnimateExpandOnHover(bool expand) {\n"
+        "  is_expanded_on_hover_ = expand;\n  ResetExpandOnHoverTimers();\n\n"
+        "  // Goatai: folders/pins acompanham a expansão por hover.\n"
+        "  if (folder_bar_) {\n"
+        "    folder_bar_->SetVisible(expand);\n"
+        "  }\n")
 if "Goatai: pins/folders só aparecem" not in t:
     t = t.replace(
         "  bool collapsed = state != tabs::VerticalTabStripCollapseState::kExpanded;\n",

@@ -16731,7 +16731,7 @@ index 0000000000..c063924bc0
 +
 +#endif  // CHROME_BROWSER_UI_VIEWS_FRAME_VERTICAL_TAB_STRIP_FOLDER_BAR_H_
 diff --git a/chrome/browser/ui/views/frame/vertical_tab_strip_region_view.cc b/chrome/browser/ui/views/frame/vertical_tab_strip_region_view.cc
-index 26693c7a06..648657efb7 100644
+index 26693c7a06..92ab69fe32 100644
 --- a/chrome/browser/ui/views/frame/vertical_tab_strip_region_view.cc
 +++ b/chrome/browser/ui/views/frame/vertical_tab_strip_region_view.cc
 @@ -4,6 +4,9 @@
@@ -16775,6 +16775,18 @@ index 26693c7a06..648657efb7 100644
    resize_area_->SetVisible(ShouldShowResizeArea());
  
    resize_area_width_ = collapsed ? kCollapsedResizeAreaWidth : kResizeAreaWidth;
+@@ -1276,6 +1296,11 @@ void VerticalTabStripRegionView::AnimateExpandOnHover(bool expand) {
+   is_expanded_on_hover_ = expand;
+   ResetExpandOnHoverTimers();
+ 
++  // Goatai: folders/pins acompanham a expansão por hover.
++  if (folder_bar_) {
++    folder_bar_->SetVisible(expand);
++  }
++
+   if (expand) {
+     expand_on_hover_start_time_ = base::TimeTicks::Now();
+     base::RecordAction(
 diff --git a/chrome/browser/ui/views/frame/vertical_tab_strip_region_view.h b/chrome/browser/ui/views/frame/vertical_tab_strip_region_view.h
 index b59c975477..0b2e9c5961 100644
 --- a/chrome/browser/ui/views/frame/vertical_tab_strip_region_view.h
