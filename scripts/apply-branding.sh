@@ -432,5 +432,19 @@ new_detach = """bool TabDragHandler::IsTabDetachable(const views::View* view) co
 if old_detach in t:
     p.write_text(t.replace(old_detach, new_detach))
 
+# 7) bloqueia a criação de nova janela no drop do arrasto
+p = src / "chrome/browser/ui/views/tabs/dragging/tab_drag_controller.cc"
+t = p.read_text()
+old_detach_start = """TabDragController::DetachIntoNewBrowserAndRunMoveLoop(
+    gfx::Point point_in_screen) {
+"""
+if "Goatai: arrastar aba nunca cria" not in t:
+    t = t.replace(old_detach_start,
+                  old_detach_start +
+                  "  // Goatai: arrastar aba nunca cria/destaca uma nova janela. A ação \\"mover\\"\\n"
+                  "  // para nova janela\\" permanece disponível no menu de contexto da aba.\\n"
+                  "  return Liveness::kAlive;\\n", 1)
+    p.write_text(t)
+
 print("folders/expand ok")
 PY

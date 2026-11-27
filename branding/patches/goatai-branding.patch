@@ -17009,6 +17009,20 @@ index 5ef11d599e..8fcd975487 100644
  }
  
  void TabDragHandler::SetTabDetached(views::View* view) {}
+diff --git a/chrome/browser/ui/views/tabs/dragging/tab_drag_controller.cc b/chrome/browser/ui/views/tabs/dragging/tab_drag_controller.cc
+index 04187c49e6..3928b1191b 100644
+--- a/chrome/browser/ui/views/tabs/dragging/tab_drag_controller.cc
++++ b/chrome/browser/ui/views/tabs/dragging/tab_drag_controller.cc
+@@ -1834,6 +1834,9 @@ void TabDragController::DetachAndAttachToNewContext(
+ TabDragController::Liveness
+ TabDragController::DetachIntoNewBrowserAndRunMoveLoop(
+     gfx::Point point_in_screen) {
++  // Goatai: arrastar aba nunca cria/destaca uma nova janela. A ação "mover
++  // para nova janela" permanece disponível no menu de contexto da aba.
++  return Liveness::kAlive;
+   if (attached_context_->GetTabStripModel()->count() ==
+       drag_data_.num_dragging_tabs()) {
+     // All the tabs in a browser are being dragged but all the tabs weren't
 diff --git a/chrome/installer/linux/common/chromium-browser.info b/chrome/installer/linux/common/chromium-browser.info
 index 694581fc82..d85d25968f 100644
 --- a/chrome/installer/linux/common/chromium-browser.info
