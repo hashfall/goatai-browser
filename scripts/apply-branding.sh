@@ -301,6 +301,20 @@ if "VerticalTabStripRegionView::GetTabDragTarget" not in t:
         "  return BaseTabStripRegionView::GetTabDragTarget(point_in_screen);\n"
         "}\n\n"
         "void VerticalTabStripRegionView::Layout(PassKey) {", 1)
+if "limita o contexto de drag" not in t:
+    t = t.replace(
+        "void VerticalTabStripRegionView::Layout(PassKey) {\n"
+        "  LayoutSuperclass<BaseTabStripRegionView>(this);\n",
+        "void VerticalTabStripRegionView::Layout(PassKey) {\n"
+        "  LayoutSuperclass<BaseTabStripRegionView>(this);\n\n"
+        "  // Goatai: limita o contexto de drag à área das abas, para que os folders\n"
+        "  // (acima delas) possam ser alvos de drop independentes.\n"
+        "  if (TabDragContext* context = GetDragContext()) {\n"
+        "    if (views::View* strip = tab_strip_view()) {\n"
+        "      context->SetBoundsRect(views::View::ConvertRectToTarget(\n"
+        "          strip, this, strip->GetLocalBounds()));\n"
+        "    }\n"
+        "  }\n", 1)
 if "folder_bar_ = folder_bar.get();" not in t:
     t = t.replace(
         "  const int region_horizontal_padding =\n"
@@ -414,37 +428,49 @@ if 'hidden pref-key="vertical_tabs.expand_on_hover"' not in t:
                   '        <settings-toggle-button id="showVerticalTabsExpandOnHover"\n'
                   '            hidden pref-key="vertical_tabs.expand_on_hover"')
     p.write_text(t)
-# 6) arrastar aba nunca destaca para nova janela (só menu de contexto)
-p = src / "chrome/browser/ui/views/tabs/common/tab_drag_handler.cc"
-t = p.read_text()
-old_detach = """bool TabDragHandler::IsTabDetachable(const views::View* view) const {
-  if (const auto* tab_view = views::AsViewClass<TabView>(view)) {
-    return !web_app::IsPinnedHomeTab(base::to_address(tab_strip_model_),
-                                     tab_view->GetTabInterface());
-  }
-  return true;
-}"""
-new_detach = """bool TabDragHandler::IsTabDetachable(const views::View* view) const {
-  // Goatai: arrastar nunca destaca a aba para outra janela. Mover para uma
-  // nova janela continua disponível no menu de contexto da aba.
-  return false;
-}"""
-if old_detach in t:
-    p.write_text(t.replace(old_detach, new_detach))
-
-# 7) bloqueia a criação de nova janela no drop do arrasto
+# 6) arrasto nunca destaca para nova janela; continua na strip atual
 p = src / "chrome/browser/ui/views/tabs/dragging/tab_drag_controller.cc"
 t = p.read_text()
-old_detach_start = """TabDragController::DetachIntoNewBrowserAndRunMoveLoop(
-    gfx::Point point_in_screen) {
+old = """bool TabDragController::ShouldDragWindowUsingSystemDnD() {
+  return !GetAttachedBrowserWidget()->IsMoveLoopSupported();
+}"""
+new = """bool TabDragController::ShouldDragWindowUsingSystemDnD() {
+  // Goatai: nunca usar DnD de sistema; mantém tudo dentro do navegador.
+  return false;
+}"""
+if old in t:
+    t = t.replace(old, new)
+
+old = """    if (current_drag_target_) {
+      TabDragContext* delegate_context =
+          current_drag_target_->OnTabDragUpdated(*this, point_in_screen);
+      if (!delegate_context && current_state_ == DragState::kDraggingWindow) {
+        delegate_context = attached_context_;
+      }
+      target_context = delegate_context;
+    }
+  }
 """
-if "Goatai: arrastar aba nunca cria" not in t:
-    t = t.replace(old_detach_start,
-                  old_detach_start +
-                  "  // Goatai: arrastar aba nunca cria/destaca uma nova janela.\n"
-                  "  // Mover para nova janela fica no menu de contexto da aba.\n"
-                  "  return Liveness::kAlive;\n", 1)
-    p.write_text(t)
+if "Goatai: sem alvo = continua" not in t:
+    t = t.replace(old, old + """
+  // Goatai: sem alvo = continua na própria strip; nunca destaca para janela.
+  if (!target_context) {
+    target_context = attached_context_;
+  }
+""", 1)
+
+old = """  gfx::NativeWindow local_window;
+  const Liveness state = GetLocalProcessWindow(
+      point_in_screen, current_state_ == DragState::kDraggingWindow,
+      &local_window);
+"""
+if "Goatai: alguns backends" not in t:
+    t = t.replace(old, old + """  if (!local_window && attached_context_ && attached_context_->GetWidget()) {
+    // Goatai: alguns backends (X11/XWayland) não resolvem a janela pelo ponto.
+    local_window = attached_context_->GetWidget()->GetNativeWindow();
+  }
+""", 1)
+p.write_text(t)
 
 # 8) remove dos menus as opções de horizontal e de desligar auto-expand
 p = src / "chrome/browser/ui/tabs/tab_menu_model.cc"

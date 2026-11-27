@@ -17019,7 +17019,7 @@ index 0000000000..1a7e84c94d
 +
 +#endif  // CHROME_BROWSER_UI_VIEWS_FRAME_VERTICAL_TAB_STRIP_FOLDER_BAR_H_
 diff --git a/chrome/browser/ui/views/frame/vertical_tab_strip_region_view.cc b/chrome/browser/ui/views/frame/vertical_tab_strip_region_view.cc
-index 26693c7a06..709fc7141f 100644
+index 26693c7a06..df59df0d91 100644
 --- a/chrome/browser/ui/views/frame/vertical_tab_strip_region_view.cc
 +++ b/chrome/browser/ui/views/frame/vertical_tab_strip_region_view.cc
 @@ -4,6 +4,10 @@
@@ -17052,7 +17052,7 @@ index 26693c7a06..709fc7141f 100644
    auto* const top_button_separator =
        content_area_view_->AddChildView(std::make_unique<FrameSeparator>());
    // The TopContainer handles the padding distance to the separator so that we
-@@ -581,6 +597,15 @@ views::ProposedLayout VerticalTabStripRegionView::CalculateProposedLayout(
+@@ -581,9 +597,27 @@ views::ProposedLayout VerticalTabStripRegionView::CalculateProposedLayout(
    return layout;
  }
  
@@ -17068,7 +17068,19 @@ index 26693c7a06..709fc7141f 100644
  void VerticalTabStripRegionView::Layout(PassKey) {
    LayoutSuperclass<BaseTabStripRegionView>(this);
  
-@@ -1033,6 +1058,11 @@ void VerticalTabStripRegionView::OnCollapseStateChanged(
++  // Goatai: limita o contexto de drag à área das abas, para que os folders
++  // (acima delas) possam ser alvos de drop independentes.
++  if (TabDragContext* context = GetDragContext()) {
++    if (views::View* strip = tab_strip_view()) {
++      context->SetBoundsRect(views::View::ConvertRectToTarget(
++          strip, this, strip->GetLocalBounds()));
++    }
++  }
++
+   // Manually position the resize area as it overlaps views handled by the flex
+   // layout.
+   resize_area_->SetBoundsRect(gfx::Rect(bounds().right() - resize_area_width_,
+@@ -1033,6 +1067,11 @@ void VerticalTabStripRegionView::OnCollapseStateChanged(
    // the collapsing state.
    bool collapsed = state != tabs::VerticalTabStripCollapseState::kExpanded;
  
@@ -17080,7 +17092,7 @@ index 26693c7a06..709fc7141f 100644
    resize_area_->SetVisible(ShouldShowResizeArea());
  
    resize_area_width_ = collapsed ? kCollapsedResizeAreaWidth : kResizeAreaWidth;
-@@ -1276,6 +1306,11 @@ void VerticalTabStripRegionView::AnimateExpandOnHover(bool expand) {
+@@ -1276,6 +1315,11 @@ void VerticalTabStripRegionView::AnimateExpandOnHover(bool expand) {
    is_expanded_on_hover_ = expand;
    ResetExpandOnHoverTimers();
  
@@ -17125,49 +17137,55 @@ index b59c975477..fc6f0d38fd 100644
    raw_ptr<VerticalTabStripTopContainer> top_button_container_ = nullptr;
    raw_ptr<views::Separator> top_button_separator_ = nullptr;
    raw_ptr<VerticalTabStripBottomContainer> bottom_button_container_ = nullptr;
-diff --git a/chrome/browser/ui/views/tabs/common/tab_drag_handler.cc b/chrome/browser/ui/views/tabs/common/tab_drag_handler.cc
-index 5ef11d599e..8fcd975487 100644
---- a/chrome/browser/ui/views/tabs/common/tab_drag_handler.cc
-+++ b/chrome/browser/ui/views/tabs/common/tab_drag_handler.cc
-@@ -732,11 +732,9 @@ content::WebContents* TabDragHandler::GetContentsForTab(views::View* view) {
+diff --git a/chrome/browser/ui/views/tabs/dragging/tab_drag_controller.cc b/chrome/browser/ui/views/tabs/dragging/tab_drag_controller.cc
+index 04187c49e6..98fe42ea72 100644
+--- a/chrome/browser/ui/views/tabs/dragging/tab_drag_controller.cc
++++ b/chrome/browser/ui/views/tabs/dragging/tab_drag_controller.cc
+@@ -1116,6 +1116,11 @@ TabDragController::Liveness TabDragController::ContinueDragging(
+     }
+   }
+ 
++  // Goatai: sem alvo = continua na própria strip; nunca destaca para janela.
++  if (!target_context) {
++    target_context = attached_context_;
++  }
++
+   if (target_context != attached_context_) {
+     is_dragging_new_browser_ = false;
+     did_restore_window_ = false;
+@@ -1282,7 +1287,8 @@ TabDragController::Liveness TabDragController::DragBrowserToNewTabStrip(
  }
  
- bool TabDragHandler::IsTabDetachable(const views::View* view) const {
--  if (const auto* tab_view = views::AsViewClass<TabView>(view)) {
--    return !web_app::IsPinnedHomeTab(base::to_address(tab_strip_model_),
--                                     tab_view->GetTabInterface());
--  }
--  return true;
-+  // Goatai: arrastar nunca destaca a aba para outra janela. Mover para uma
-+  // nova janela continua disponível no menu de contexto da aba.
+ bool TabDragController::ShouldDragWindowUsingSystemDnD() {
+-  return !GetAttachedBrowserWidget()->IsMoveLoopSupported();
++  // Goatai: nunca usar DnD de sistema; mantém tudo dentro do navegador.
 +  return false;
  }
  
- void TabDragHandler::SetTabDetached(views::View* view) {}
-diff --git a/chrome/browser/ui/views/tabs/dragging/tab_drag_controller.cc b/chrome/browser/ui/views/tabs/dragging/tab_drag_controller.cc
-index 04187c49e6..31ad427f87 100644
---- a/chrome/browser/ui/views/tabs/dragging/tab_drag_controller.cc
-+++ b/chrome/browser/ui/views/tabs/dragging/tab_drag_controller.cc
-@@ -1349,6 +1349,9 @@ void TabDragController::OnTabThumbnailAvailable(
- TabDragController::Liveness TabDragController::StartSystemDnDSessionIfNecessary(
-     TabDragContext* context,
-     gfx::Point point_in_screen) {
-+  // Goatai: nunca iniciar DnD de sistema ao arrastar abas/Janela. No Wayland
-+  // isso pode entregar a URL a outro navegador e abrir uma janela nova.
-+  return Liveness::kAlive;
-   CHECK(ShouldDragWindowUsingSystemDnD());
-   CHECK(ui::ResourceBundle::HasSharedInstance());
-   current_state_ = DragState::kDraggingUsingSystemDnD;
-@@ -1834,6 +1837,9 @@ void TabDragController::DetachAndAttachToNewContext(
- TabDragController::Liveness
- TabDragController::DetachIntoNewBrowserAndRunMoveLoop(
-     gfx::Point point_in_screen) {
-+  // Goatai: arrastar aba nunca cria/destaca uma nova janela. A ação "mover
-+  // para nova janela" permanece disponível no menu de contexto da aba.
-+  return Liveness::kAlive;
-   if (attached_context_->GetTabStripModel()->count() ==
-       drag_data_.num_dragging_tabs()) {
-     // All the tabs in a browser are being dragged but all the tabs weren't
+ void TabDragController::RequestTabThumbnail() {
+@@ -1457,6 +1463,11 @@ TabDragController::GetDragTargetForPoint(gfx::Point point_in_screen) {
+   const Liveness state = GetLocalProcessWindow(
+       point_in_screen, current_state_ == DragState::kDraggingWindow,
+       &local_window);
++  if (!local_window && attached_context_ && attached_context_->GetWidget()) {
++    // Goatai: alguns backends (X11/XWayland) não resolvem a janela pelo ponto.
++    // Usa a janela do próprio drag para permitir alvos internos (folders).
++    local_window = attached_context_->GetWidget()->GetNativeWindow();
++  }
+   if (state == Liveness::kDeleted) {
+     return std::tuple(Liveness::kDeleted, nullptr, nullptr);
+   }
+@@ -1467,7 +1478,9 @@ TabDragController::GetDragTargetForPoint(gfx::Point point_in_screen) {
+     TabDragContext* destination_tab_strip =
+         browser_view->tab_strip_view()->GetDragContext();
+     if (destination_tab_strip) {
+-      if (DoesTabStripContain(destination_tab_strip, point_in_screen)) {
++      const bool contains =
++          DoesTabStripContain(destination_tab_strip, point_in_screen);
++      if (contains) {
+         return std::tuple(Liveness::kAlive, destination_tab_strip, nullptr);
+       } else if (TabDragTarget* candidate =
+                      GetTabDragPointResolver()->GetDragTarget(
 diff --git a/chrome/installer/linux/common/chromium-browser.info b/chrome/installer/linux/common/chromium-browser.info
 index 694581fc82..d85d25968f 100644
 --- a/chrome/installer/linux/common/chromium-browser.info

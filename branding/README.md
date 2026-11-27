@@ -45,7 +45,10 @@ arquivos.
 
 - Menus usam `views::ContextMenuController` com `MenuRunner`/modelo mantidos
   como membros (não morrem junto com o escopo).
-- Arrastar aba nunca destaca/cria janela: `IsTabDetachable() == false` e
-  `DetachIntoNewBrowserAndRunMoveLoop`/`StartSystemDnDSessionIfNecessary`
-  retornam cedo. "Move to new window" fica no menu de contexto da aba.
+- Arrastar aba **para um folder** fixa a URL como pin (TabDragTarget). O
+  contexto de drag é limitado à área das abas no Layout, para que a barra de
+  folders seja um alvo independente.
+- Arrastar aba nunca destaca/cria janela: o target_context é preso ao
+  attached_context e o DnD de sistema fica desligado. "Move to new window"
+  permanece no menu de contexto da aba.
 - "Show tabs horizontally" e "Turn off auto expanding tabs" removidos dos menus.
