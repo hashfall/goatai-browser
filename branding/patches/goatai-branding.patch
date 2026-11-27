@@ -15892,10 +15892,10 @@ index fac2f4211e..0185c90e19 100644
    ]
 diff --git a/chrome/browser/ui/views/frame/vertical_tab_strip_folder_bar.cc b/chrome/browser/ui/views/frame/vertical_tab_strip_folder_bar.cc
 new file mode 100644
-index 0000000000..e73bc00983
+index 0000000000..19d2a05954
 --- /dev/null
 +++ b/chrome/browser/ui/views/frame/vertical_tab_strip_folder_bar.cc
-@@ -0,0 +1,843 @@
+@@ -0,0 +1,852 @@
 +// Copyright 2026 Goatai. All rights reserved.
 +// Use of this source code is governed by a BSD-style license.
 +
@@ -16027,7 +16027,7 @@ index 0000000000..e73bc00983
 +  NodeContextMenuDelegate(VerticalTabStripFolderBar* bar,
 +                          const BookmarkNode* node)
 +      : bar_(bar), node_(node) {}
-+  enum Command { kOpenAll, kDelete };
++  enum Command { kOpenAll, kPinHere, kDelete };
 +  void ExecuteCommand(int command_id, int event_flags) override {
 +    if (!bar_ || !node_) {
 +      return;
@@ -16035,6 +16035,9 @@ index 0000000000..e73bc00983
 +    switch (command_id) {
 +      case kOpenAll:
 +        bar_->OpenAllInFolder(node_);
++        break;
++      case kPinHere:
++        bar_->PinCurrentPageTo(node_);
 +        break;
 +      case kDelete:
 +        bar_->DeleteFolder(node_);
@@ -16261,6 +16264,7 @@ index 0000000000..e73bc00983
 +    NodeContextMenuDelegate delegate(bar_, node_);
 +    ui::SimpleMenuModel model(&delegate);
 +    model.AddItem(NodeContextMenuDelegate::kOpenAll, u"Open all");
++    model.AddItem(NodeContextMenuDelegate::kPinHere, u"Pin current tab here");
 +    model.AddSeparator(ui::NORMAL_SEPARATOR);
 +    model.AddItem(NodeContextMenuDelegate::kDelete, u"Delete folder");
 +    views::MenuRunner runner(&model, views::MenuRunner::HAS_MNEMONICS);
@@ -16642,7 +16646,12 @@ index 0000000000..e73bc00983
 +
 +void VerticalTabStripFolderBar::PinCurrentPage() {
 +  EnsureRootFolder();
-+  if (!root_ || !browser_) {
++  PinCurrentPageTo(root_);
++}
++
++void VerticalTabStripFolderBar::PinCurrentPageTo(
++    const bookmarks::BookmarkNode* folder) {
++  if (!folder || !folder->is_folder() || !browser_) {
 +    return;
 +  }
 +  content::WebContents* contents =
@@ -16654,8 +16663,8 @@ index 0000000000..e73bc00983
 +  if (!url.is_valid() || url.SchemeIs("chrome")) {
 +    return;
 +  }
-+  model_->AddNewURL(root_, root_->children().size(),
-+                    contents->GetTitle(), url);
++  model_->AddNewURL(folder, folder->children().size(), contents->GetTitle(),
++                    url);
 +}
 +
 +void VerticalTabStripFolderBar::ShowBarContextMenu(views::View* source,
@@ -16741,10 +16750,10 @@ index 0000000000..e73bc00983
 +}
 diff --git a/chrome/browser/ui/views/frame/vertical_tab_strip_folder_bar.h b/chrome/browser/ui/views/frame/vertical_tab_strip_folder_bar.h
 new file mode 100644
-index 0000000000..c563f41357
+index 0000000000..52ea987a14
 --- /dev/null
 +++ b/chrome/browser/ui/views/frame/vertical_tab_strip_folder_bar.h
-@@ -0,0 +1,128 @@
+@@ -0,0 +1,129 @@
 +// Copyright 2026 Goatai. All rights reserved.
 +// Use of this source code is governed by a BSD-style license.
 +
@@ -16836,6 +16845,7 @@ index 0000000000..c563f41357
 +  void CreateFolder();
 +  void DeleteFolder(const bookmarks::BookmarkNode* folder);
 +  void PinCurrentPage();
++  void PinCurrentPageTo(const bookmarks::BookmarkNode* folder);
 +  void ShowBarContextMenu(views::View* source, const gfx::Point& point);
 +
 +  // TabDragTarget: permite arrastar abas para dentro de um folder.
@@ -16980,6 +16990,25 @@ index b59c975477..fc6f0d38fd 100644
    raw_ptr<VerticalTabStripTopContainer> top_button_container_ = nullptr;
    raw_ptr<views::Separator> top_button_separator_ = nullptr;
    raw_ptr<VerticalTabStripBottomContainer> bottom_button_container_ = nullptr;
+diff --git a/chrome/browser/ui/views/tabs/common/tab_drag_handler.cc b/chrome/browser/ui/views/tabs/common/tab_drag_handler.cc
+index 5ef11d599e..8fcd975487 100644
+--- a/chrome/browser/ui/views/tabs/common/tab_drag_handler.cc
++++ b/chrome/browser/ui/views/tabs/common/tab_drag_handler.cc
+@@ -732,11 +732,9 @@ content::WebContents* TabDragHandler::GetContentsForTab(views::View* view) {
+ }
+ 
+ bool TabDragHandler::IsTabDetachable(const views::View* view) const {
+-  if (const auto* tab_view = views::AsViewClass<TabView>(view)) {
+-    return !web_app::IsPinnedHomeTab(base::to_address(tab_strip_model_),
+-                                     tab_view->GetTabInterface());
+-  }
+-  return true;
++  // Goatai: arrastar nunca destaca a aba para outra janela. Mover para uma
++  // nova janela continua disponível no menu de contexto da aba.
++  return false;
+ }
+ 
+ void TabDragHandler::SetTabDetached(views::View* view) {}
 diff --git a/chrome/installer/linux/common/chromium-browser.info b/chrome/installer/linux/common/chromium-browser.info
 index 694581fc82..d85d25968f 100644
 --- a/chrome/installer/linux/common/chromium-browser.info

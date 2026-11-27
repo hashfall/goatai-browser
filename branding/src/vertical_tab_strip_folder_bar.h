@@ -89,6 +89,7 @@ class VerticalTabStripFolderBar : public views::View,
   void CreateFolder();
   void DeleteFolder(const bookmarks::BookmarkNode* folder);
   void PinCurrentPage();
+  void PinCurrentPageTo(const bookmarks::BookmarkNode* folder);
   void ShowBarContextMenu(views::View* source, const gfx::Point& point);
 
   // TabDragTarget: permite arrastar abas para dentro de um folder.

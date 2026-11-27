@@ -129,7 +129,7 @@ class NodeContextMenuDelegate : public ui::SimpleMenuModel::Delegate {
   NodeContextMenuDelegate(VerticalTabStripFolderBar* bar,
                           const BookmarkNode* node)
       : bar_(bar), node_(node) {}
-  enum Command { kOpenAll, kDelete };
+  enum Command { kOpenAll, kPinHere, kDelete };
   void ExecuteCommand(int command_id, int event_flags) override {
     if (!bar_ || !node_) {
       return;
@@ -137,6 +137,9 @@ class NodeContextMenuDelegate : public ui::SimpleMenuModel::Delegate {
     switch (command_id) {
       case kOpenAll:
         bar_->OpenAllInFolder(node_);
+        break;
+      case kPinHere:
+        bar_->PinCurrentPageTo(node_);
         break;
       case kDelete:
         bar_->DeleteFolder(node_);
@@ -363,6 +366,7 @@ class GoataiFolderTile : public GoataiBaseTile {
     NodeContextMenuDelegate delegate(bar_, node_);
     ui::SimpleMenuModel model(&delegate);
     model.AddItem(NodeContextMenuDelegate::kOpenAll, u"Open all");
+    model.AddItem(NodeContextMenuDelegate::kPinHere, u"Pin current tab here");
     model.AddSeparator(ui::NORMAL_SEPARATOR);
     model.AddItem(NodeContextMenuDelegate::kDelete, u"Delete folder");
     views::MenuRunner runner(&model, views::MenuRunner::HAS_MNEMONICS);
@@ -744,7 +748,12 @@ void VerticalTabStripFolderBar::DeleteFolder(const BookmarkNode* folder) {
 
 void VerticalTabStripFolderBar::PinCurrentPage() {
   EnsureRootFolder();
-  if (!root_ || !browser_) {
+  PinCurrentPageTo(root_);
+}
+
+void VerticalTabStripFolderBar::PinCurrentPageTo(
+    const bookmarks::BookmarkNode* folder) {
+  if (!folder || !folder->is_folder() || !browser_) {
     return;
   }
   content::WebContents* contents =
@@ -756,8 +765,8 @@ void VerticalTabStripFolderBar::PinCurrentPage() {
   if (!url.is_valid() || url.SchemeIs("chrome")) {
     return;
   }
-  model_->AddNewURL(root_, root_->children().size(),
-                    contents->GetTitle(), url);
+  model_->AddNewURL(folder, folder->children().size(), contents->GetTitle(),
+                    url);
 }
 
 void VerticalTabStripFolderBar::ShowBarContextMenu(views::View* source,

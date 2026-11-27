@@ -414,5 +414,23 @@ if 'hidden pref-key="vertical_tabs.expand_on_hover"' not in t:
                   '        <settings-toggle-button id="showVerticalTabsExpandOnHover"\n'
                   '            hidden pref-key="vertical_tabs.expand_on_hover"')
     p.write_text(t)
+# 6) arrastar aba nunca destaca para nova janela (só menu de contexto)
+p = src / "chrome/browser/ui/views/tabs/common/tab_drag_handler.cc"
+t = p.read_text()
+old_detach = """bool TabDragHandler::IsTabDetachable(const views::View* view) const {
+  if (const auto* tab_view = views::AsViewClass<TabView>(view)) {
+    return !web_app::IsPinnedHomeTab(base::to_address(tab_strip_model_),
+                                     tab_view->GetTabInterface());
+  }
+  return true;
+}"""
+new_detach = """bool TabDragHandler::IsTabDetachable(const views::View* view) const {
+  // Goatai: arrastar nunca destaca a aba para outra janela. Mover para uma
+  // nova janela continua disponível no menu de contexto da aba.
+  return false;
+}"""
+if old_detach in t:
+    p.write_text(t.replace(old_detach, new_detach))
+
 print("folders/expand ok")
 PY
