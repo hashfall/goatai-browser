@@ -7,14 +7,18 @@
 #include <memory>
 #include <vector>
 
+#include "base/callback_list.h"
 #include "base/memory/raw_ptr.h"
 #include "base/timer/timer.h"
 #include "components/bookmarks/browser/bookmark_model_observer.h"
+#include "chrome/browser/ui/views/tabs/dragging/tab_drag_target.h"
 #include "ui/views/context_menu_controller.h"
 #include "ui/base/mojom/menu_source_type.mojom-forward.h"
 #include "ui/views/view.h"
 
 class BrowserWindowInterface;
+class ExpandOnHoverLock;
+class TabDragContext;
 class Profile;
 class GoataiFolderTile;
 class GoataiPinTile;
@@ -35,7 +39,8 @@ class MenuRunner;
 // Arrastar um pin sobre um folder move o bookmark para dentro dele.
 class VerticalTabStripFolderBar : public views::View,
                                   public bookmarks::BookmarkModelObserver,
-                                  public views::ContextMenuController {
+                                  public views::ContextMenuController,
+                                  public TabDragTarget {
  public:
   VerticalTabStripFolderBar(Profile* profile, BrowserWindowInterface* browser);
   VerticalTabStripFolderBar(const VerticalTabStripFolderBar&) = delete;
@@ -86,6 +91,20 @@ class VerticalTabStripFolderBar : public views::View,
   void PinCurrentPage();
   void ShowBarContextMenu(views::View* source, const gfx::Point& point);
 
+  // TabDragTarget: permite arrastar abas para dentro de um folder.
+  void OnTabDragEntered() override;
+  TabDragContext* OnTabDragUpdated(TabDragTarget::DragController& controller,
+                                   const gfx::Point& point_in_screen) override;
+  void OnTabDragExited(const gfx::Point& point_in_screen) override;
+  void OnTabDragEnded() override;
+  bool CanDropTab() override;
+  void HandleTabDrop(TabDragTarget::DragController& controller) override;
+  base::CallbackListSubscription RegisterWillDestroyCallback(
+      base::OnceClosure callback) override;
+
+  // Mantém a sidebar expandida enquanto um menu/diálogo está aberto.
+  std::unique_ptr<ExpandOnHoverLock> AcquireKeepExpandedLock();
+
   Profile* profile() const { return profile_; }
   bookmarks::BookmarkModel* model() const { return model_; }
   const bookmarks::BookmarkNode* root_folder() const { return root_; }
@@ -100,6 +119,8 @@ class VerticalTabStripFolderBar : public views::View,
   raw_ptr<BrowserWindowInterface> browser_;
   raw_ptr<bookmarks::BookmarkModel> model_ = nullptr;
   raw_ptr<const bookmarks::BookmarkNode> root_ = nullptr;
+  raw_ptr<const bookmarks::BookmarkNode> tab_drag_folder_ = nullptr;
+  base::OnceClosureList on_will_destroy_callback_list_;
   bool rebuilding_ = false;
   base::OneShotTimer rebuild_timer_;
 };

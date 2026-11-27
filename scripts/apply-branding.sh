@@ -284,6 +284,23 @@ if "vertical_tab_strip_folder_bar.h" not in t:
         '#include "chrome/browser/ui/views/frame/vertical_tab_strip_region_view.h"',
         '#include "chrome/browser/ui/views/frame/vertical_tab_strip_region_view.h"\n'
         '#include "chrome/browser/ui/views/frame/vertical_tab_strip_folder_bar.h"', 1)
+if "tabs/dragging/tab_drag_target.h" not in t:
+    t = t.replace(
+        '#include "chrome/browser/ui/views/frame/vertical_tab_strip_folder_bar.h"',
+        '#include "chrome/browser/ui/views/frame/vertical_tab_strip_folder_bar.h"\n'
+        '#include "chrome/browser/ui/views/tabs/dragging/tab_drag_target.h"', 1)
+if "VerticalTabStripRegionView::GetTabDragTarget" not in t:
+    t = t.replace(
+        "void VerticalTabStripRegionView::Layout(PassKey) {",
+        "TabDragTarget* VerticalTabStripRegionView::GetTabDragTarget(\n"
+        "    const gfx::Point& point_in_screen) {\n"
+        "  if (folder_bar_ && folder_bar_->GetVisible() &&\n"
+        "      folder_bar_->GetBoundsInScreen().Contains(point_in_screen)) {\n"
+        "    return folder_bar_;\n"
+        "  }\n"
+        "  return BaseTabStripRegionView::GetTabDragTarget(point_in_screen);\n"
+        "}\n\n"
+        "void VerticalTabStripRegionView::Layout(PassKey) {", 1)
 if "folder_bar_ = folder_bar.get();" not in t:
     t = t.replace(
         "  const int region_horizontal_padding =\n"
@@ -328,6 +345,12 @@ if "folder_bar_" not in t:
     t = t.replace("  raw_ptr<views::View> content_area_view_ = nullptr;",
                   "  raw_ptr<views::View> content_area_view_ = nullptr;\n"
                   "  raw_ptr<VerticalTabStripFolderBar> folder_bar_ = nullptr;")
+if "VerticalTabStripFolderBar* GetFolderBar()" not in t:
+    t = t.replace("  VerticalTabStripBottomContainer* GetBottomContainer() {",
+                  "  VerticalTabStripFolderBar* GetFolderBar() { return folder_bar_; }\n\n"
+                  "  TabDragTarget* GetTabDragTarget(\n"
+                  "      const gfx::Point& point_in_screen) override;\n\n"
+                  "  VerticalTabStripBottomContainer* GetBottomContainer() {")
 p.write_text(t)
 
 # 3) BUILD.gn
@@ -357,6 +380,13 @@ if "vertical_tab_strip_folder_bar.cc" not in t:
                   '    "//ui/base/clipboard",\n'
                   '    "//ui/base/dragdrop:types",\n'
                   '    "//ui/color",')
+    p.write_text(t)
+
+if 'tabs/dragging:tab_drag_target' not in t:
+    t = t.replace(
+        '    "//chrome/browser/ui/views/tabs/common:impl",',
+        '    "//chrome/browser/ui/views/tabs/common:impl",\n'
+        '    "//chrome/browser/ui/views/tabs/dragging:tab_drag_target",')
     p.write_text(t)
 
 # 4) expandir no hover sempre ligado, sem opção

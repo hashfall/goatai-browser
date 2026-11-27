@@ -3,6 +3,11 @@
 
 #include "chrome/browser/ui/views/frame/vertical_tab_strip_folder_bar.h"
 
+#include "chrome/browser/ui/views/frame/vertical_tab_strip_region_view.h"
+#include "chrome/browser/ui/views/tabs/dragging/drag_session_data.h"
+#include "chrome/browser/ui/views/tabs/dragging/tab_drag_context.h"
+#include "chrome/browser/ui/views/tabs/vertical/vertical_tab_strip_expand_on_hover_lock.h"
+
 #include <algorithm>
 #include <memory>
 #include <set>
@@ -198,6 +203,10 @@ class GoataiBaseTile : public views::View {
     SchedulePaint();
   }
 
+  const bookmarks::BookmarkNode* GetNode() const { return node_; }
+  virtual bool AcceptsTabDrop() const { return false; }
+  virtual void SetTabDropHovered(bool hovered) {}
+
   int GetDragOperations(const gfx::Point& press_pt) override {
     if (!node_ || node_->is_folder()) {
       return ui::DragDropTypes::DRAG_NONE;
@@ -341,6 +350,12 @@ class GoataiFolderTile : public GoataiBaseTile {
         bar, dragged, target);
   }
 
+  bool AcceptsTabDrop() const override { return true; }
+  void SetTabDropHovered(bool hovered) override {
+    drop_hovered_ = hovered;
+    SchedulePaint();
+  }
+
  protected:
   void Activate() override { ShowMenu(); }
 
@@ -351,6 +366,7 @@ class GoataiFolderTile : public GoataiBaseTile {
     model.AddSeparator(ui::NORMAL_SEPARATOR);
     model.AddItem(NodeContextMenuDelegate::kDelete, u"Delete folder");
     views::MenuRunner runner(&model, views::MenuRunner::HAS_MNEMONICS);
+    auto lock = bar_->AcquireKeepExpandedLock();
     runner.RunMenuAt(GetWidget(), nullptr, gfx::Rect(point, gfx::Size()),
                      views::MenuAnchorPosition::kTopLeft,
                      ui::mojom::MenuSourceType::kMouse);
@@ -394,6 +410,7 @@ class GoataiFolderTile : public GoataiBaseTile {
     menu_model_ = std::move(model);
     menu_runner_ = std::make_unique<views::MenuRunner>(
         menu_model_.get(), views::MenuRunner::HAS_MNEMONICS);
+    auto lock = bar_->AcquireKeepExpandedLock();
     menu_runner_->RunMenuAt(GetWidget(), nullptr, GetLocalBounds(),
                             views::MenuAnchorPosition::kTopLeft,
                             ui::mojom::MenuSourceType::kMouse);
@@ -462,6 +479,7 @@ VerticalTabStripFolderBar::VerticalTabStripFolderBar(
 }
 
 VerticalTabStripFolderBar::~VerticalTabStripFolderBar() {
+  on_will_destroy_callback_list_.Notify();
   if (model_) {
     model_->RemoveObserver(this);
   }
@@ -571,6 +589,102 @@ void VerticalTabStripFolderBar::OnThemeChanged() {
   SchedulePaint();
 }
 
+void VerticalTabStripFolderBar::OnTabDragEntered() {}
+
+TabDragContext* VerticalTabStripFolderBar::OnTabDragUpdated(
+    TabDragTarget::DragController& controller,
+    const gfx::Point& point_in_screen) {
+  GoataiFolderTile* target = nullptr;
+  for (views::View* child : children()) {
+    auto* tile = static_cast<GoataiBaseTile*>(child);
+    if (tile->AcceptsTabDrop() &&
+        child->GetBoundsInScreen().Contains(point_in_screen)) {
+      target = static_cast<GoataiFolderTile*>(child);
+      break;
+    }
+  }
+  for (views::View* child : children()) {
+    auto* tile = static_cast<GoataiBaseTile*>(child);
+    if (tile->AcceptsTabDrop()) {
+      tile->SetTabDropHovered(child == target);
+    }
+  }
+  tab_drag_folder_ = target ? target->GetNode() : nullptr;
+  if (auto* region = views::AsViewClass<VerticalTabStripRegionView>(
+          parent() ? parent()->parent() : nullptr)) {
+    if (TabDragContext* context = region->GetDragContext()) {
+      return context;
+    }
+  }
+  return const_cast<TabDragContext*>(controller.GetAttachedContext());
+}
+
+void VerticalTabStripFolderBar::OnTabDragExited(
+    const gfx::Point& point_in_screen) {
+  tab_drag_folder_ = nullptr;
+  for (views::View* child : children()) {
+    static_cast<GoataiBaseTile*>(child)->SetTabDropHovered(false);
+  }
+}
+
+void VerticalTabStripFolderBar::OnTabDragEnded() {
+  tab_drag_folder_ = nullptr;
+  for (views::View* child : children()) {
+    static_cast<GoataiBaseTile*>(child)->SetTabDropHovered(false);
+  }
+}
+
+bool VerticalTabStripFolderBar::CanDropTab() {
+  return tab_drag_folder_ != nullptr;
+}
+
+void VerticalTabStripFolderBar::HandleTabDrop(
+    TabDragTarget::DragController& controller) {
+  if (!tab_drag_folder_ || !model_) {
+    return;
+  }
+  const DragSessionData& data = controller.GetSessionData();
+  for (const TabDragData& drag : data.tab_drag_data_) {
+    content::WebContents* contents = drag.contents;
+    if (!contents) {
+      continue;
+    }
+    const GURL url = contents->GetLastCommittedURL();
+    if (!url.is_valid() || url.SchemeIs("chrome")) {
+      continue;
+    }
+    bool exists = false;
+    for (const auto& child : tab_drag_folder_->children()) {
+      if (child->is_url() && child->url() == url) {
+        exists = true;
+        break;
+      }
+    }
+    if (!exists) {
+      model_->AddNewURL(tab_drag_folder_,
+                        tab_drag_folder_->children().size(),
+                        contents->GetTitle(), url);
+    }
+  }
+  OnTabDragEnded();
+}
+
+base::CallbackListSubscription
+VerticalTabStripFolderBar::RegisterWillDestroyCallback(
+    base::OnceClosure callback) {
+  return on_will_destroy_callback_list_.Add(std::move(callback));
+}
+
+std::unique_ptr<ExpandOnHoverLock>
+VerticalTabStripFolderBar::AcquireKeepExpandedLock() {
+  auto* region = views::AsViewClass<VerticalTabStripRegionView>(
+      parent() ? parent()->parent() : nullptr);
+  if (!region) {
+    return nullptr;
+  }
+  return region->GetExpandOnHoverLock(ExpandOnHoverLockType::kKeepExpanded);
+}
+
 void VerticalTabStripFolderBar::OpenBookmark(const BookmarkNode* node) {
   if (!node || !node->is_url() || !browser_) {
     return;
@@ -654,6 +768,7 @@ void VerticalTabStripFolderBar::ShowBarContextMenu(views::View* source,
   model.AddSeparator(ui::NORMAL_SEPARATOR);
   model.AddItem(BarMenuDelegate::kNewFolder, u"New folder");
   views::MenuRunner runner(&model, views::MenuRunner::HAS_MNEMONICS);
+  auto lock = AcquireKeepExpandedLock();
   runner.RunMenuAt(source->GetWidget(), nullptr,
                    gfx::Rect(point, gfx::Size()), views::MenuAnchorPosition::kTopLeft,
                    ui::mojom::MenuSourceType::kMouse);

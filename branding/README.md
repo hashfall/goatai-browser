@@ -37,3 +37,6 @@ arquivos.
 - Arrastar um pin para cima de um folder move o bookmark (drop nativo de
   bookmarks do Chromium). Soltar no espaço vazio devolve para a raiz.
 - A barra fica oculta quando a sidebar está recolhida.
+- Arrastar uma **aba** para cima de um folder fixa a URL como pin
+  (TabDragTarget; a aba continua aberta).
+- Menus abertos mantêm a sidebar expandida (lock kKeepExpanded).
