@@ -405,34 +405,39 @@ class GoataiFolderTile : public GoataiBaseTile {
   std::unique_ptr<views::MenuRunner> menu_runner_;
 };
 
-class GoataiNewPinTile : public GoataiBaseTile {
+class GoataiNewFolderTile : public GoataiBaseTile {
  public:
-  GoataiNewPinTile(VerticalTabStripFolderBar* bar, const BookmarkNode* root)
+  GoataiNewFolderTile(VerticalTabStripFolderBar* bar, const BookmarkNode* root)
       : GoataiBaseTile(bar, root) {
-    GetViewAccessibility().SetName(u"Pin current tab");
-    SetTooltipText(u"Pin current tab");
+    GetViewAccessibility().SetName(u"New folder");
+    SetTooltipText(u"New folder");
   }
 
  protected:
-  void Activate() override { bar_->PinCurrentPage(); }
+  void Activate() override { bar_->CreateFolder(); }
 
   void PaintContent(gfx::Canvas* canvas, const gfx::Rect& content) override {
     cc::PaintFlags flags;
     flags.setAntiAlias(true);
-    flags.setColor(
-        bar_->GetColorProvider()->GetColor(kColorToolbarButtonIcon));
     flags.setStyle(cc::PaintFlags::kStroke_Style);
     flags.setStrokeWidth(1.6f);
-    const gfx::Point c = content.CenterPoint();
-    // Cabeça de alfinete + haste.
-    canvas->DrawCircle(gfx::Point(c.x() - 2, c.y() - 3), 4.5f, flags);
-    canvas->DrawLine(gfx::Point(c.x(), c.y() + 1),
-                     gfx::Point(c.x() + 5, c.y() + 6), flags);
-    // Pequeno "+" no canto.
-    canvas->DrawLine(gfx::Point(c.x() + 4, c.y() - 9),
-                     gfx::Point(c.x() + 9, c.y() - 9), flags);
-    canvas->DrawLine(gfx::Point(c.x() + 6, c.y() - 11),
-                     gfx::Point(c.x() + 6, c.y() - 6), flags);
+    flags.setColor(
+        bar_->GetColorProvider()->GetColor(kColorToolbarButtonIcon));
+    const gfx::RectF body(content.x() + 5.0f, content.y() + 9.0f,
+                          content.width() - 10.0f, content.height() - 14.0f);
+    canvas->DrawRoundRect(body, 2.5f, flags);
+    canvas->DrawLine(gfx::Point(content.x() + 8, content.y() + 9),
+                     gfx::Point(content.x() + 12, content.y() + 5), flags);
+    canvas->DrawLine(gfx::Point(content.x() + 12, content.y() + 5),
+                     gfx::Point(content.x() + 19, content.y() + 5), flags);
+    canvas->DrawLine(gfx::Point(content.x() + 19, content.y() + 5),
+                     gfx::Point(content.x() + 22, content.y() + 9), flags);
+    // "+" no canto inferior direito.
+    const gfx::Point c(content.CenterPoint());
+    canvas->DrawLine(gfx::Point(c.x() - 1, c.y() + 5),
+                     gfx::Point(c.x() + 7, c.y() + 5), flags);
+    canvas->DrawLine(gfx::Point(c.x() + 3, c.y() + 1),
+                     gfx::Point(c.x() + 3, c.y() + 9), flags);
   }
 
   void ShowContextMenu(const gfx::Point& point) override {
@@ -500,7 +505,7 @@ void VerticalTabStripFolderBar::Rebuild() {
       }
     }
     std::unique_ptr<views::View> new_tile =
-        std::make_unique<GoataiNewPinTile>(this, root_);
+        std::make_unique<GoataiNewFolderTile>(this, root_);
     AddChildView(std::move(new_tile));
   }
   rebuilding_ = false;
