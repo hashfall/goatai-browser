@@ -61,6 +61,61 @@ constexpr int kGap = 8;
 constexpr int kBarVPadding = 6;
 constexpr int kIconSize = 20;
 constexpr char16_t kRootFolderName[] = u"Goatai Pins";
+constexpr char kFolderColorMetaKey[] = "goatai.color";
+
+struct GoataiFolderColor {
+  tab_groups::TabGroupColorId id;
+  const char* key;
+  SkColor color;
+};
+
+constexpr GoataiFolderColor kFolderColors[] = {
+    {tab_groups::TabGroupColorId::kGrey, "grey", gfx::kGoogleGrey600},
+    {tab_groups::TabGroupColorId::kBlue, "blue", gfx::kGoogleBlue600},
+    {tab_groups::TabGroupColorId::kRed, "red", gfx::kGoogleRed600},
+    {tab_groups::TabGroupColorId::kYellow, "yellow", gfx::kGoogleYellow600},
+    {tab_groups::TabGroupColorId::kGreen, "green", gfx::kGoogleGreen600},
+    {tab_groups::TabGroupColorId::kPink, "pink", gfx::kGooglePink600},
+    {tab_groups::TabGroupColorId::kPurple, "purple", gfx::kGooglePurple600},
+    {tab_groups::TabGroupColorId::kCyan, "cyan", gfx::kGoogleCyan600},
+    {tab_groups::TabGroupColorId::kOrange, "orange", gfx::kGoogleOrange600},
+};
+
+const char* KeyForFolderColor(tab_groups::TabGroupColorId id) {
+  for (const auto& entry : kFolderColors) {
+    if (entry.id == id) {
+      return entry.key;
+    }
+  }
+  return nullptr;
+}
+
+SkColor ColorForFolder(const bookmarks::BookmarkNode* node,
+                       SkColor fallback) {
+  std::string value;
+  if (!node || !node->GetMetaInfo(kFolderColorMetaKey, &value)) {
+    return fallback;
+  }
+  for (const auto& entry : kFolderColors) {
+    if (value == entry.key) {
+      return entry.color;
+    }
+  }
+  return fallback;
+}
+
+int SelectedColorCommand(const bookmarks::BookmarkNode* node) {
+  std::string value;
+  if (!node || !node->GetMetaInfo(kFolderColorMetaKey, &value)) {
+    return 0;
+  }
+  for (size_t i = 0; i < std::size(kFolderColors); ++i) {
+    if (value == kFolderColors[i].key) {
+      return static_cast<int>(i) + 1;
+    }
+  }
+  return 0;
+}
 
 using bookmarks::BookmarkModel;
 using bookmarks::BookmarkNode;
@@ -77,6 +132,36 @@ bool IsDescendant(const BookmarkNode* node, const BookmarkNode* maybe_parent) {
 std::u16string LabelForNode(const BookmarkNode* node) {
   return node->is_folder() ? node->GetTitle() : node->GetTitle();
 }
+
+// Submenu de cor do folder.
+class FolderColorMenuDelegate : public ui::SimpleMenuModel::Delegate {
+ public:
+  FolderColorMenuDelegate(VerticalTabStripFolderBar* bar,
+                          const BookmarkNode* node,
+                          int selected)
+      : bar_(bar), node_(node), selected_(selected) {}
+
+  void ExecuteCommand(int command_id, int event_flags) override {
+    if (!bar_ || !node_) {
+      return;
+    }
+    if (command_id == 0) {
+      bar_->SetFolderColor(node_, std::nullopt);
+    } else {
+      bar_->SetFolderColor(
+          node_, static_cast<tab_groups::TabGroupColorId>(command_id - 1));
+    }
+  }
+
+  bool IsCommandIdChecked(int command_id) const override {
+    return command_id == selected_;
+  }
+
+ private:
+  raw_ptr<VerticalTabStripFolderBar> bar_;
+  raw_ptr<const BookmarkNode> node_;
+  int selected_ = 0;
+};
 
 // Delega cliques de um menu simples para nós de bookmark.
 class NodeMenuDelegate : public ui::SimpleMenuModel::Delegate {
@@ -375,6 +460,21 @@ class GoataiFolderTile : public GoataiBaseTile {
     menu_model_->AddItem(NodeContextMenuDelegate::kOpenAll, u"Open all");
     menu_model_->AddItem(NodeContextMenuDelegate::kPinHere,
                          u"Pin current tab here");
+
+    color_menu_delegate_ = std::make_unique<FolderColorMenuDelegate>(
+        bar_, node_, SelectedColorCommand(node_));
+    color_submenu_ = std::make_unique<ui::SimpleMenuModel>(
+        color_menu_delegate_.get());
+    color_submenu_->AddRadioItem(0, u"Default", 0);
+    const auto& labels = tab_groups::GetTabGroupColorLabelMap();
+    for (const auto& entry : kFolderColors) {
+      const auto it = labels.find(entry.id);
+      color_submenu_->AddRadioItem(
+          static_cast<int>(entry.id) + 1,
+          it != labels.end() ? it->second : std::u16string(), 0);
+    }
+    menu_model_->AddSubMenu(100, u"Color", color_submenu_.get());
+
     menu_model_->AddSeparator(ui::NORMAL_SEPARATOR);
     menu_model_->AddItem(NodeContextMenuDelegate::kDelete, u"Delete folder");
     menu_runner_ = std::make_unique<views::MenuRunner>(
@@ -391,8 +491,8 @@ class GoataiFolderTile : public GoataiBaseTile {
     flags.setAntiAlias(true);
     flags.setStyle(cc::PaintFlags::kStroke_Style);
     flags.setStrokeWidth(1.6f);
-    flags.setColor(
-        bar_->GetColorProvider()->GetColor(kColorToolbarButtonIcon));
+    flags.setColor(ColorForFolder(
+        node_, bar_->GetColorProvider()->GetColor(kColorToolbarButtonIcon)));
     const gfx::RectF body(content.x() + 5.0f, content.y() + 9.0f,
                           content.width() - 10.0f, content.height() - 14.0f);
     canvas->DrawRoundRect(body, 2.5f, flags);
@@ -433,6 +533,8 @@ class GoataiFolderTile : public GoataiBaseTile {
  private:
   std::unique_ptr<NodeMenuDelegate> menu_delegate_;
   std::unique_ptr<NodeContextMenuDelegate> node_menu_delegate_;
+  std::unique_ptr<FolderColorMenuDelegate> color_menu_delegate_;
+  std::unique_ptr<ui::SimpleMenuModel> color_submenu_;
   std::unique_ptr<ui::SimpleMenuModel> menu_model_;
   std::unique_ptr<views::MenuRunner> menu_runner_;
 };
@@ -453,8 +555,8 @@ class GoataiNewFolderTile : public GoataiBaseTile {
     flags.setAntiAlias(true);
     flags.setStyle(cc::PaintFlags::kStroke_Style);
     flags.setStrokeWidth(1.6f);
-    flags.setColor(
-        bar_->GetColorProvider()->GetColor(kColorToolbarButtonIcon));
+    flags.setColor(ColorForFolder(
+        node_, bar_->GetColorProvider()->GetColor(kColorToolbarButtonIcon)));
     const gfx::RectF body(content.x() + 5.0f, content.y() + 9.0f,
                           content.width() - 10.0f, content.height() - 14.0f);
     canvas->DrawRoundRect(body, 2.5f, flags);
@@ -749,6 +851,22 @@ void VerticalTabStripFolderBar::CreateFolder() {
                     u"Folder " + base::NumberToString16(number));
 }
 
+void VerticalTabStripFolderBar::SetFolderColor(
+    const BookmarkNode* folder,
+    std::optional<tab_groups::TabGroupColorId> color) {
+  if (!model_ || !folder || !folder->is_folder()) {
+    return;
+  }
+  if (!color.has_value()) {
+    model_->DeleteNodeMetaInfo(folder, kFolderColorMetaKey);
+    return;
+  }
+  const char* key = KeyForFolderColor(color.value());
+  if (key) {
+    model_->SetNodeMetaInfo(folder, kFolderColorMetaKey, key);
+  }
+}
+
 void VerticalTabStripFolderBar::DeleteFolder(const BookmarkNode* folder) {
   if (!model_ || !folder || folder == root_ || !folder->parent() ||
       folder->is_permanent_node()) {
@@ -837,6 +955,11 @@ void VerticalTabStripFolderBar::BookmarkNodeRemoved(
 }
 
 void VerticalTabStripFolderBar::BookmarkNodeChanged(const BookmarkNode* node) {
+  ScheduleRebuild();
+}
+
+void VerticalTabStripFolderBar::BookmarkMetaInfoChanged(
+    const BookmarkNode* node) {
   ScheduleRebuild();
 }
 

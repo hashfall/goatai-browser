@@ -11,6 +11,7 @@
 #include "base/memory/raw_ptr.h"
 #include "base/timer/timer.h"
 #include "components/bookmarks/browser/bookmark_model_observer.h"
+#include "components/tab_groups/tab_group_color.h"
 #include "ui/menus/simple_menu_model.h"
 #include "chrome/browser/ui/views/tabs/dragging/tab_drag_target.h"
 #include "ui/views/context_menu_controller.h"
@@ -71,6 +72,7 @@ class VerticalTabStripFolderBar : public views::View,
                            const std::set<GURL>& removed_urls,
                            const base::Location& location) override;
   void BookmarkNodeChanged(const bookmarks::BookmarkNode* node) override;
+  void BookmarkMetaInfoChanged(const bookmarks::BookmarkNode* node) override;
   void BookmarkNodeFaviconChanged(const bookmarks::BookmarkNode* node) override;
   void BookmarkNodeMoved(const bookmarks::BookmarkNode* old_parent,
                          size_t old_index,
@@ -95,6 +97,9 @@ class VerticalTabStripFolderBar : public views::View,
   void DeleteFolder(const bookmarks::BookmarkNode* folder);
   void PinCurrentPage();
   void PinCurrentPageTo(const bookmarks::BookmarkNode* folder);
+  void SetFolderColor(
+      const bookmarks::BookmarkNode* folder,
+      std::optional<tab_groups::TabGroupColorId> color);
   void ShowBarContextMenu(views::View* source, const gfx::Point& point);
 
   // TabDragTarget: permite arrastar abas para dentro de um folder.

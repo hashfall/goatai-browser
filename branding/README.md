@@ -52,3 +52,10 @@ arquivos.
   attached_context e o DnD de sistema fica desligado. "Move to new window"
   permanece no menu de contexto da aba.
 - "Show tabs horizontally" e "Turn off auto expanding tabs" removidos dos menus.
+
+### Cores de folder
+
+- Clique direito no folder → submenu **Color**: Default + 9 cores (mesma
+  paleta dos tab groups, rótulos de `GetTabGroupColorLabelMap`).
+- A cor fica em `BookmarkModel` meta info (`goatai.color`) e tinge o ícone
+  do folder. `BookmarkMetaInfoChanged` agenda o rebuild da barra.
