@@ -1,6 +1,6 @@
 # GoatAI Browser
 
-**Versão atual: v0.6.0** — Chromium 160.0.8187.0
+**Versão atual: v0.6.1** — Chromium 160.0.8187.0
 
 Navegador baseado no Chromium (upstream, sem histórico), com branding Goatai,
 tema retrô vaporwave (cantos retos, bordas neon), abas verticais e
@@ -8,8 +8,16 @@ folders de pins com perfis de cor.
 
 ## Versão
 
-- `VERSION` / tag git `v0.6.0`
+- `VERSION` / tag git `v0.6.1`
 - Commit de referência: o commit imediatamente anterior à tag
+
+### v0.6.1
+
+- Auto-hide não esconde/mexe no layout enquanto o botão do mouse está
+  pressionado (drag de folder/aba, seleção de texto)
+- Folder bar acompanha a expansão por hover: mostra folders + pins + "+" no
+  hover e volta ao modo collapsed (1 ícone por linha) ao sair
+- Reordenar folders por drag validado (antes/depois pelo lado do drop)
 
 ### v0.6.0
 

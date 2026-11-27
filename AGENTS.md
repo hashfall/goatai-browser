@@ -126,6 +126,12 @@ git -C src apply --reverse --check ../branding/patches/goatai-branding.patch
 - Sidebar collapsed: o folder bar mostra **1 ícone por linha** que os folders
   ocupariam expandidos (2 rows → 2 ícones, etc.), usando a largura uncollapsed
   para calcular `per_row`.
+- O folder bar acompanha o **hover**: `UpdateFolderBarCollapseState()` usa
+  `controller_collapsed && !is_expanded_on_hover_`; no hover mostra
+  folders+pins+"+", e volta ao collapsed ao sair (sem sumir).
+- O auto-hide é congelado enquanto o botão esquerdo está pressionado/drag:
+  `mouse_button_down_` no `ToolbarAutoHideController` (press/release/move com
+  `EF_LEFT_MOUSE_BUTTON`); evita esconder a barra no meio do DnD.
 - Correções de crash/drag em `tab_drag_controller.cc`.
 
 ### Auto-hide da toolbar (estilo drawer)

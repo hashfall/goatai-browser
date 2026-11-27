@@ -17460,10 +17460,10 @@ index 581402036f..6111061bb9 100644
                                 IDS_VERTICAL_TABS_SEND_FEEDBACK);
 diff --git a/chrome/browser/ui/views/frame/toolbar_auto_hide.cc b/chrome/browser/ui/views/frame/toolbar_auto_hide.cc
 new file mode 100644
-index 0000000000..1a9e8dde2e
+index 0000000000..231023e538
 --- /dev/null
 +++ b/chrome/browser/ui/views/frame/toolbar_auto_hide.cc
-@@ -0,0 +1,325 @@
+@@ -0,0 +1,368 @@
 +// Copyright 2026 Goatai. All rights reserved.
 +// Use of this source code is governed by a BSD-style license.
 +
@@ -17512,6 +17512,7 @@ index 0000000000..1a9e8dde2e
 +        this, widget->GetNativeWindow(),
 +        {ui::EventType::kMouseMoved, ui::EventType::kMouseDragged,
 +         ui::EventType::kMouseEntered, ui::EventType::kMouseExited,
++         ui::EventType::kMousePressed, ui::EventType::kMouseReleased,
 +         ui::EventType::kKeyPressed});
 +  }
 +  focus_manager_ = widget->GetFocusManager();
@@ -17721,6 +17722,12 @@ index 0000000000..1a9e8dde2e
 +  if (ShouldSuspend() || !toolbar_->GetVisible()) {
 +    return;
 +  }
++  // Com o botão do mouse pressionado (clique segurado, seleção de texto,
++  // drag de aba ou DnD de folder/pin), não mexe no layout: esconder a barra
++  // no meio do drag desloca os alvos de drop e estraga o arrasto.
++  if (mouse_button_down_) {
++    return;
++  }
 +  // Só esconde quando o conteúdo (a página) está em foco e o mouse saiu da
 +  // barra. Com menu ou bolha aberta o foco está neles, então a barra fica.
 +  if (!ContentsHasFocus() || MouseOverToolbar() || FocusInToolbar()) {
@@ -17756,13 +17763,49 @@ index 0000000000..1a9e8dde2e
 +  }
 +
 +  switch (event.type()) {
++    case ui::EventType::kMousePressed: {
++      const ui::MouseEvent* mouse = event.AsMouseEvent();
++      if (mouse && mouse->IsLeftMouseButton()) {
++        // Botão esquerdo pressionado: congela o auto-hide para não mexer no
++        // layout durante o clique segurado/drag (DnD de folder/pin, drag de
++        // aba, seleção de texto).
++        mouse_button_down_ = true;
++        hide_timer_.Stop();
++        return;
++      }
++      break;
++    }
++    case ui::EventType::kMouseReleased: {
++      const ui::MouseEvent* mouse = event.AsMouseEvent();
++      if (mouse && mouse->IsLeftMouseButton()) {
++        mouse_button_down_ = false;
++      }
++      // Segue a lógica normal abaixo (reagendar hide/show conforme o hover).
++      break;
++    }
 +    case ui::EventType::kMouseMoved:
-+    case ui::EventType::kMouseDragged:
++    case ui::EventType::kMouseDragged: {
++      // Se o release aconteceu fora da janela (o monitor não o viu), limpa o
++      // estado na próxima movimentação sem o botão pressionado, para a barra
++      // não ficar travada.
++      if (!(event.flags() & ui::EF_LEFT_MOUSE_BUTTON)) {
++        mouse_button_down_ = false;
++      }
++      break;
++    }
 +    case ui::EventType::kMouseEntered:
 +    case ui::EventType::kMouseExited:
 +      break;
 +    default:
 +      return;
++  }
++
++  // Com o botão pressionado, não esconde nem revela (mantém o layout estável
++  // durante o drag). O comportamento normal volta no release (ou na próxima
++  // movimentação sem botão, se o release foi fora da janela).
++  if (mouse_button_down_) {
++    hide_timer_.Stop();
++    return;
 +  }
 +
 +  if (MouseOverToolbar()) {
@@ -17791,10 +17834,10 @@ index 0000000000..1a9e8dde2e
 +}
 diff --git a/chrome/browser/ui/views/frame/toolbar_auto_hide.h b/chrome/browser/ui/views/frame/toolbar_auto_hide.h
 new file mode 100644
-index 0000000000..382813ace6
+index 0000000000..2a3c7bceb4
 --- /dev/null
 +++ b/chrome/browser/ui/views/frame/toolbar_auto_hide.h
-@@ -0,0 +1,77 @@
+@@ -0,0 +1,80 @@
 +// Copyright 2026 Goatai. All rights reserved.
 +// Use of this source code is governed by a BSD-style license.
 +
@@ -17869,15 +17912,18 @@ index 0000000000..382813ace6
 +  int full_height_ = 0;
 +  bool created_layer_ = false;
 +  State state_ = State::kIdle;
++  // Botão esquerdo pressionado: o auto-hide fica congelado para não mudar o
++  // layout durante cliques segurados, seleção ou drags (folder/pin/aba).
++  bool mouse_button_down_ = false;
 +};
 +
 +#endif  // CHROME_BROWSER_UI_VIEWS_FRAME_TOOLBAR_AUTO_HIDE_H_
 diff --git a/chrome/browser/ui/views/frame/vertical_tab_strip_folder_bar.cc b/chrome/browser/ui/views/frame/vertical_tab_strip_folder_bar.cc
 new file mode 100644
-index 0000000000..6705b97660
+index 0000000000..3f13fd0524
 --- /dev/null
 +++ b/chrome/browser/ui/views/frame/vertical_tab_strip_folder_bar.cc
-@@ -0,0 +1,1411 @@
+@@ -0,0 +1,1420 @@
 +// Copyright 2026 Goatai. All rights reserved.
 +// Use of this source code is governed by a BSD-style license.
 +
@@ -18465,8 +18511,15 @@ index 0000000000..6705b97660
 +    if (!node_) {
 +      return;
 +    }
++    // Goatai: mantém a sidebar expandida durante o drag, como o menu de
++    // contexto faz. Sem isso, qualquer evento (desativação da janela, foco,
++    // fim do hover) colapsa o folder bar no meio do arrasto, derrubando os
++    // alvos de drop. O lock é liberado em OnDragDone (fim do DnD).
++    drag_lock_ = bar_->AcquireKeepExpandedLock();
 +    bookmarks::BookmarkNodeData(node_).Write(bar_->profile()->GetPath(), data);
 +  }
++
++  void OnDragDone() override { drag_lock_.reset(); }
 +
 + protected:
 +  virtual void Activate() = 0;
@@ -18502,6 +18555,8 @@ index 0000000000..6705b97660
 +  bool hovered_ = false;
 +  bool pressed_ = false;
 +  bool drop_hovered_ = false;
++  // Segura a expansão por hover enquanto um drag de folder/pin está ativo.
++  std::unique_ptr<ExpandOnHoverLock> drag_lock_;
 +};
 +
 +class GoataiPinTile : public GoataiBaseTile {
@@ -19449,7 +19504,7 @@ index 0000000000..2499670681
 +
 +#endif  // CHROME_BROWSER_UI_VIEWS_FRAME_VERTICAL_TAB_STRIP_FOLDER_BAR_H_
 diff --git a/chrome/browser/ui/views/frame/vertical_tab_strip_region_view.cc b/chrome/browser/ui/views/frame/vertical_tab_strip_region_view.cc
-index 26693c7a06..b67fd24781 100644
+index 26693c7a06..9897f9903e 100644
 --- a/chrome/browser/ui/views/frame/vertical_tab_strip_region_view.cc
 +++ b/chrome/browser/ui/views/frame/vertical_tab_strip_region_view.cc
 @@ -4,6 +4,10 @@
@@ -19515,27 +19570,44 @@ index 26693c7a06..b67fd24781 100644
    bool collapsed = state != tabs::VerticalTabStripCollapseState::kExpanded;
  
 +  // Goatai: com a barra collapsed, o folder bar mostra um folder por linha.
-+  if (folder_bar_) {
-+    folder_bar_->SetCollapsed(collapsed, uncollapsed_width());
-+  }
++  // A expansão por hover também entra na conta (o folder bar acompanha o
++  // estado visual, não só o do controller).
++  UpdateFolderBarCollapseState();
 +
    resize_area_->SetVisible(ShouldShowResizeArea());
  
    resize_area_width_ = collapsed ? kCollapsedResizeAreaWidth : kResizeAreaWidth;
-@@ -1276,6 +1315,11 @@ void VerticalTabStripRegionView::AnimateExpandOnHover(bool expand) {
+@@ -1272,10 +1311,28 @@ void VerticalTabStripRegionView::ResetExpandOnHoverTimers() {
+   expand_on_hover_heuristic_samples_ = 0;
+ }
+ 
++void VerticalTabStripRegionView::UpdateFolderBarCollapseState() {
++  if (!folder_bar_) {
++    return;
++  }
++  // O folder bar fica no modo collapsed (1 ícone de folder por linha) apenas
++  // quando a sidebar está realmente collapsed E não está expandida por hover.
++  // Assim, ao revelar por hover o bar mostra folders + pins + "+", e ao
++  // terminar o hover volta ao modo collapsed sem sumir.
++  const bool controller_collapsed =
++      state_controller_->GetCollapseState() !=
++      tabs::VerticalTabStripCollapseState::kExpanded;
++  folder_bar_->SetCollapsed(controller_collapsed && !is_expanded_on_hover_,
++                            uncollapsed_width());
++}
++
+ void VerticalTabStripRegionView::AnimateExpandOnHover(bool expand) {
    is_expanded_on_hover_ = expand;
    ResetExpandOnHoverTimers();
  
 +  // Goatai: folders/pins acompanham a expansão por hover.
-+  if (folder_bar_) {
-+    folder_bar_->SetVisible(expand);
-+  }
++  UpdateFolderBarCollapseState();
 +
    if (expand) {
      expand_on_hover_start_time_ = base::TimeTicks::Now();
      base::RecordAction(
 diff --git a/chrome/browser/ui/views/frame/vertical_tab_strip_region_view.h b/chrome/browser/ui/views/frame/vertical_tab_strip_region_view.h
-index b59c975477..fc6f0d38fd 100644
+index b59c975477..f2eade83c1 100644
 --- a/chrome/browser/ui/views/frame/vertical_tab_strip_region_view.h
 +++ b/chrome/browser/ui/views/frame/vertical_tab_strip_region_view.h
 @@ -37,6 +37,7 @@
@@ -19559,7 +19631,17 @@ index b59c975477..fc6f0d38fd 100644
    VerticalTabStripBottomContainer* GetBottomContainer() {
      return bottom_button_container_;
    }
-@@ -236,6 +243,7 @@ class VerticalTabStripRegionView final
+@@ -218,6 +225,9 @@ class VerticalTabStripRegionView final
+   void CalculateMouseVelocityForExpandOnHover();
+   void ResetExpandOnHoverTimers();
+   void AnimateExpandOnHover(bool expand);
++  // Goatai: sincroniza o folder bar com o estado visual da sidebar,
++  // considerando também a expansão por hover (e não só o state controller).
++  void UpdateFolderBarCollapseState();
+ 
+   void RegisterExpandOnHoverLock(VerticalTabStripExpandOnHoverLock* lock);
+   void UnregisterExpandOnHoverLock(VerticalTabStripExpandOnHoverLock* lock);
+@@ -236,6 +246,7 @@ class VerticalTabStripRegionView final
    double organizer_panel_show_percent_ = 0.0;
  
    raw_ptr<views::View> content_area_view_ = nullptr;
