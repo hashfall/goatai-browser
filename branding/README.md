@@ -40,3 +40,12 @@ arquivos.
 - Arrastar uma **aba** para cima de um folder fixa a URL como pin
   (TabDragTarget; a aba continua aberta).
 - Menus abertos mantêm a sidebar expandida (lock kKeepExpanded).
+
+## Menus e arrasto (Goatai)
+
+- Menus usam `views::ContextMenuController` com `MenuRunner`/modelo mantidos
+  como membros (não morrem junto com o escopo).
+- Arrastar aba nunca destaca/cria janela: `IsTabDetachable() == false` e
+  `DetachIntoNewBrowserAndRunMoveLoop`/`StartSystemDnDSessionIfNecessary`
+  retornam cedo. "Move to new window" fica no menu de contexto da aba.
+- "Show tabs horizontally" e "Turn off auto expanding tabs" removidos dos menus.

@@ -441,9 +441,58 @@ old_detach_start = """TabDragController::DetachIntoNewBrowserAndRunMoveLoop(
 if "Goatai: arrastar aba nunca cria" not in t:
     t = t.replace(old_detach_start,
                   old_detach_start +
-                  "  // Goatai: arrastar aba nunca cria/destaca uma nova janela. A ação \\"mover\\"\\n"
-                  "  // para nova janela\\" permanece disponível no menu de contexto da aba.\\n"
-                  "  return Liveness::kAlive;\\n", 1)
+                  "  // Goatai: arrastar aba nunca cria/destaca uma nova janela.\n"
+                  "  // Mover para nova janela fica no menu de contexto da aba.\n"
+                  "  return Liveness::kAlive;\n", 1)
+    p.write_text(t)
+
+# 8) remove dos menus as opções de horizontal e de desligar auto-expand
+p = src / "chrome/browser/ui/tabs/tab_menu_model.cc"
+t = p.read_text()
+start_marker = ("  if (controller) {\n"
+                "    AddSeparator(ui::NORMAL_SEPARATOR);\n"
+                "    const int switch_to_horizontal_id =")
+if start_marker in t:
+    start = t.index(start_marker)
+    end = t.index("  // Append extension items for the 'tab' context", start)
+    t = t[:start] + "  // Goatai: sem opção de voltar para abas horizontais.\n\n" + t[end:]
+    p.write_text(t)
+
+p = src / "chrome/browser/ui/views/frame/system_menu_model_builder.cc"
+t = p.read_text()
+old = ("      model->AddItemWithStringId(IDC_TOGGLE_VERTICAL_TABS,\n"
+       "                                 switch_to_horizontal_id);\n\n"
+       "      model->AddItemWithStringId(IDC_TOGGLE_VERTICAL_TABS_COLLAPSE,")
+new = ("      // Goatai: sem opção horizontal; auto-expand é obrigatório.\n"
+       "      model->AddItemWithStringId(IDC_TOGGLE_VERTICAL_TABS_COLLAPSE,")
+if old in t:
+    t = t.replace(old, new)
+old = ("      model->AddItemWithStringId(\n"
+       "          IDC_TOGGLE_VERTICAL_TABS_EXPAND_ON_HOVER,\n"
+       "          controller->IsExpandOnHoverEnabled()\n"
+       "              ? IDS_VERTICAL_TABS_DISABLE_EXPAND_ON_HOVER\n"
+       "              : IDS_VERTICAL_TABS_ENABLE_EXPAND_ON_HOVER);\n"
+       "      model->SetElementIdentifierAt(\n"
+       "          model->GetIndexOfCommandId(IDC_TOGGLE_VERTICAL_TABS_EXPAND_ON_HOVER)\n"
+       "              .value(),\n"
+       "          kToggleVerticalTabsExpandOnHoverElementId);\n")
+if old in t:
+    t = t.replace(old, "")
+old = ("    model->SetElementIdentifierAt(\n"
+       "        model->GetIndexOfCommandId(IDC_TOGGLE_VERTICAL_TABS).value(),\n"
+       "        kToggleVerticalTabsElementId);\n")
+if old in t:
+    t = t.replace(old, "")
+p.write_text(t)
+
+p = src / "chrome/browser/ui/toolbar/app_menu_model.cc"
+t = p.read_text()
+start_marker = ("  if (auto* controller = tabs::VerticalTabStripStateController::From(browser)) {\n"
+                "    if (controller->ShouldDisplayVerticalTabs()) {")
+if start_marker in t:
+    start = t.index(start_marker)
+    end = t.index("  if (CustomizeChromePageHandler::IsSupported(", start)
+    t = t[:start] + "  // Goatai: abas sempre verticais, sem toggle.\n" + t[end:]
     p.write_text(t)
 
 print("folders/expand ok")

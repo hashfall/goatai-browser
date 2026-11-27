@@ -11,12 +11,17 @@
 #include "base/memory/raw_ptr.h"
 #include "base/timer/timer.h"
 #include "components/bookmarks/browser/bookmark_model_observer.h"
+#include "ui/menus/simple_menu_model.h"
 #include "chrome/browser/ui/views/tabs/dragging/tab_drag_target.h"
 #include "ui/views/context_menu_controller.h"
 #include "ui/base/mojom/menu_source_type.mojom-forward.h"
 #include "ui/views/view.h"
 
 class BrowserWindowInterface;
+
+namespace ui {
+class SimpleMenuModel;
+}  // namespace ui
 class ExpandOnHoverLock;
 class TabDragContext;
 class Profile;
@@ -122,6 +127,9 @@ class VerticalTabStripFolderBar : public views::View,
   raw_ptr<const bookmarks::BookmarkNode> root_ = nullptr;
   raw_ptr<const bookmarks::BookmarkNode> tab_drag_folder_ = nullptr;
   base::OnceClosureList on_will_destroy_callback_list_;
+  std::unique_ptr<ui::SimpleMenuModel::Delegate> bar_menu_delegate_;
+  std::unique_ptr<ui::SimpleMenuModel> bar_menu_model_;
+  std::unique_ptr<views::MenuRunner> bar_menu_runner_;
   bool rebuilding_ = false;
   base::OneShotTimer rebuild_timer_;
 };

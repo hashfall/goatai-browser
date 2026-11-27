@@ -157,10 +157,12 @@ class NodeContextMenuDelegate : public ui::SimpleMenuModel::Delegate {
 // ---------------------------------------------------------------------------
 // Tiles
 
-class GoataiBaseTile : public views::View {
+class GoataiBaseTile : public views::View,
+                      public views::ContextMenuController {
  public:
   GoataiBaseTile(VerticalTabStripFolderBar* bar, const BookmarkNode* node)
       : bar_(bar), node_(node) {
+    set_context_menu_controller(this);
     SetAccessibleRole(ax::mojom::Role::kButton);
     GetViewAccessibility().SetName(LabelForNode(node));
     SetTooltipText(LabelForNode(node));
@@ -177,10 +179,6 @@ class GoataiBaseTile : public views::View {
   }
 
   bool OnMousePressed(const ui::MouseEvent& event) override {
-    if (event.IsOnlyRightMouseButton()) {
-      ShowContextMenu(event.location());
-      return true;
-    }
     if (!event.IsOnlyLeftMouseButton()) {
       return false;
     }
@@ -229,6 +227,15 @@ class GoataiBaseTile : public views::View {
   virtual void Activate() = 0;
   virtual void PaintContent(gfx::Canvas* canvas, const gfx::Rect& content) = 0;
   virtual void ShowContextMenu(const gfx::Point& point) {}
+
+  // views::ContextMenuController:
+  void ShowContextMenuForViewImpl(views::View* source,
+                                  const gfx::Point& point,
+                                  ui::mojom::MenuSourceType source_type) override {
+    gfx::Point local = point;
+    ConvertPointFromScreen(this, &local);
+    ShowContextMenu(local);
+  }
 
   void OnPaint(gfx::Canvas* canvas) override {
     const gfx::Rect bounds = GetLocalBounds();
@@ -363,17 +370,20 @@ class GoataiFolderTile : public GoataiBaseTile {
   void Activate() override { ShowMenu(); }
 
   void ShowContextMenu(const gfx::Point& point) override {
-    NodeContextMenuDelegate delegate(bar_, node_);
-    ui::SimpleMenuModel model(&delegate);
-    model.AddItem(NodeContextMenuDelegate::kOpenAll, u"Open all");
-    model.AddItem(NodeContextMenuDelegate::kPinHere, u"Pin current tab here");
-    model.AddSeparator(ui::NORMAL_SEPARATOR);
-    model.AddItem(NodeContextMenuDelegate::kDelete, u"Delete folder");
-    views::MenuRunner runner(&model, views::MenuRunner::HAS_MNEMONICS);
+    node_menu_delegate_ = std::make_unique<NodeContextMenuDelegate>(bar_, node_);
+    menu_model_ = std::make_unique<ui::SimpleMenuModel>(node_menu_delegate_.get());
+    menu_model_->AddItem(NodeContextMenuDelegate::kOpenAll, u"Open all");
+    menu_model_->AddItem(NodeContextMenuDelegate::kPinHere,
+                         u"Pin current tab here");
+    menu_model_->AddSeparator(ui::NORMAL_SEPARATOR);
+    menu_model_->AddItem(NodeContextMenuDelegate::kDelete, u"Delete folder");
+    menu_runner_ = std::make_unique<views::MenuRunner>(
+        menu_model_.get(), views::MenuRunner::HAS_MNEMONICS);
     auto lock = bar_->AcquireKeepExpandedLock();
-    runner.RunMenuAt(GetWidget(), nullptr, gfx::Rect(point, gfx::Size()),
-                     views::MenuAnchorPosition::kTopLeft,
-                     ui::mojom::MenuSourceType::kMouse);
+    menu_runner_->RunMenuAt(GetWidget(), nullptr,
+                            gfx::Rect(point, gfx::Size()),
+                            views::MenuAnchorPosition::kTopLeft,
+                            ui::mojom::MenuSourceType::kMouse);
   }
 
   void PaintContent(gfx::Canvas* canvas, const gfx::Rect& content) override {
@@ -422,6 +432,7 @@ class GoataiFolderTile : public GoataiBaseTile {
 
  private:
   std::unique_ptr<NodeMenuDelegate> menu_delegate_;
+  std::unique_ptr<NodeContextMenuDelegate> node_menu_delegate_;
   std::unique_ptr<ui::SimpleMenuModel> menu_model_;
   std::unique_ptr<views::MenuRunner> menu_runner_;
 };
@@ -474,6 +485,7 @@ VerticalTabStripFolderBar::VerticalTabStripFolderBar(
     BrowserWindowInterface* browser)
     : profile_(profile), browser_(browser) {
   SetNotifyEnterExitOnChild(true);
+  set_context_menu_controller(this);
   model_ = BookmarkModelFactory::GetForBrowserContext(profile_);
   if (model_) {
     model_->AddObserver(this);
@@ -771,16 +783,18 @@ void VerticalTabStripFolderBar::PinCurrentPageTo(
 
 void VerticalTabStripFolderBar::ShowBarContextMenu(views::View* source,
                                                    const gfx::Point& point) {
-  BarMenuDelegate delegate(this);
-  ui::SimpleMenuModel model(&delegate);
-  model.AddItem(BarMenuDelegate::kPinCurrent, u"Pin current tab");
-  model.AddSeparator(ui::NORMAL_SEPARATOR);
-  model.AddItem(BarMenuDelegate::kNewFolder, u"New folder");
-  views::MenuRunner runner(&model, views::MenuRunner::HAS_MNEMONICS);
+  bar_menu_delegate_ = std::make_unique<BarMenuDelegate>(this);
+  bar_menu_model_ =
+      std::make_unique<ui::SimpleMenuModel>(bar_menu_delegate_.get());
+  bar_menu_model_->AddItem(BarMenuDelegate::kPinCurrent, u"Pin current tab");
+  bar_menu_model_->AddSeparator(ui::NORMAL_SEPARATOR);
+  bar_menu_model_->AddItem(BarMenuDelegate::kNewFolder, u"New folder");
+  bar_menu_runner_ = std::make_unique<views::MenuRunner>(
+      bar_menu_model_.get(), views::MenuRunner::HAS_MNEMONICS);
   auto lock = AcquireKeepExpandedLock();
-  runner.RunMenuAt(source->GetWidget(), nullptr,
-                   gfx::Rect(point, gfx::Size()), views::MenuAnchorPosition::kTopLeft,
-                   ui::mojom::MenuSourceType::kMouse);
+  bar_menu_runner_->RunMenuAt(
+      source->GetWidget(), nullptr, gfx::Rect(point, gfx::Size()),
+      views::MenuAnchorPosition::kTopLeft, ui::mojom::MenuSourceType::kMouse);
 }
 
 void VerticalTabStripFolderBar::ShowContextMenuForViewImpl(

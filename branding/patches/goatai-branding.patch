@@ -15774,6 +15774,45 @@ index 0000000000..6a0963ae57
 +                         const ui::ColorProviderKey& key);
 +
 +#endif  // CHROME_BROWSER_UI_COLOR_GOATAI_COLOR_MIXER_H_
+diff --git a/chrome/browser/ui/tabs/tab_menu_model.cc b/chrome/browser/ui/tabs/tab_menu_model.cc
+index 7dcdbcfdbf..70095e070a 100644
+--- a/chrome/browser/ui/tabs/tab_menu_model.cc
++++ b/chrome/browser/ui/tabs/tab_menu_model.cc
+@@ -647,33 +647,7 @@ void TabMenuModel::Build(tabs::TabHandle context_tab) {
+     BuildSendTabToSelfItem(context_tab, tabs);
+   }
+ 
+-  if (controller) {
+-    AddSeparator(ui::NORMAL_SEPARATOR);
+-    const int switch_to_horizontal_id =
+-#if BUILDFLAG(IS_MAC)
+-        IDS_SWITCH_TO_HORIZONTAL_TAB_MAC;
+-#else
+-        IDS_SWITCH_TO_HORIZONTAL_TAB;
+-#endif
+-
+-    const int switch_to_vertical_id =
+-#if BUILDFLAG(IS_MAC)
+-        IDS_SWITCH_TO_VERTICAL_TAB_MAC;
+-#else
+-        IDS_SWITCH_TO_VERTICAL_TAB;
+-#endif
+-    if (controller->ShouldDisplayVerticalTabs()) {
+-      AddItemWithStringId(TabStripModel::CommandToggleVertical,
+-                          switch_to_horizontal_id);
+-    } else {
+-      AddItemWithStringId(TabStripModel::CommandToggleVertical,
+-                          switch_to_vertical_id);
+-      const user_education::DisplayNewBadge show_badge =
+-          UserEducationService::MaybeShowNewBadge(tab_strip_->profile(),
+-                                                  tabs::kVerticalTabsNewBadge);
+-      SetIsNewFeatureAt(GetItemCount() - 1, show_badge);
+-    }
+-  }
++  // Goatai: sem opção de voltar para abas horizontais.
+ 
+   // Append extension items for the 'tab' context if the feature is enabled.
+ #if BUILDFLAG(ENABLE_EXTENSIONS)
 diff --git a/chrome/browser/ui/tabs/tab_strip_prefs.cc b/chrome/browser/ui/tabs/tab_strip_prefs.cc
 index 9a855747c2..2d694c5308 100644
 --- a/chrome/browser/ui/tabs/tab_strip_prefs.cc
@@ -15839,6 +15878,39 @@ index 4eb92203f6..46d312fab9 100644
    if (is_expand_on_hover_enabled_) {
      base::RecordAction(
          base::UserMetricsAction("VerticalTabs_ExpandOnHover_Enabled"));
+diff --git a/chrome/browser/ui/toolbar/app_menu_model.cc b/chrome/browser/ui/toolbar/app_menu_model.cc
+index aaa4eb7779..7f897a0865 100644
+--- a/chrome/browser/ui/toolbar/app_menu_model.cc
++++ b/chrome/browser/ui/toolbar/app_menu_model.cc
+@@ -1090,27 +1090,7 @@ void ToolsMenuModel::Build(BrowserWindowInterface* browser) {
+       this, IDC_NAME_WINDOW, IDS_NAME_WINDOW,
+       features::IsRoundedIconsEnabled() ? kWebAssetIcon : kNameWindowOldIcon);
+ 
+-  if (auto* controller = tabs::VerticalTabStripStateController::From(browser)) {
+-    if (controller->ShouldDisplayVerticalTabs()) {
+-      AddItemWithStringIdAndVectorIcon(
+-          this, IDC_TOGGLE_VERTICAL_TABS, IDS_SWITCH_TO_HORIZONTAL_TAB,
+-          features::IsRoundedIconsEnabled() ? kToolbarIcon : kToolbarOldIcon);
+-    } else {
+-      AddItemWithStringIdAndVectorIcon(
+-          this, IDC_TOGGLE_VERTICAL_TABS, IDS_SWITCH_TO_VERTICAL_TAB,
+-          base::i18n::IsRTL() ? features::IsRoundedIconsEnabled()
+-                                    ? kDockToLeftIcon
+-                                    : kDockToRightOldIcon
+-          : features::IsRoundedIconsEnabled() ? kDockToRightIcon
+-                                              : kDockToLeftOldIcon);
+-      const user_education::DisplayNewBadge show_badge =
+-          UserEducationService::MaybeShowNewBadge(browser->GetProfile(),
+-                                                  tabs::kVerticalTabsNewBadge);
+-      SetIsNewFeatureAt(GetIndexOfCommandId(IDC_TOGGLE_VERTICAL_TABS).value(),
+-                        show_badge, ui::NewBadgeType::kNew);
+-    }
+-  }
+-
++  // Goatai: abas sempre verticais, sem toggle.
+   if (CustomizeChromePageHandler::IsSupported(
+           NtpCustomBackgroundServiceFactory::GetForProfile(
+               browser->GetProfile()),
 diff --git a/chrome/browser/ui/views/frame/BUILD.gn b/chrome/browser/ui/views/frame/BUILD.gn
 index fac2f4211e..0185c90e19 100644
 --- a/chrome/browser/ui/views/frame/BUILD.gn
@@ -15890,12 +15962,53 @@ index fac2f4211e..0185c90e19 100644
      "//ui/compositor",
      "//ui/display",
    ]
+diff --git a/chrome/browser/ui/views/frame/system_menu_model_builder.cc b/chrome/browser/ui/views/frame/system_menu_model_builder.cc
+index 581402036f..6111061bb9 100644
+--- a/chrome/browser/ui/views/frame/system_menu_model_builder.cc
++++ b/chrome/browser/ui/views/frame/system_menu_model_builder.cc
+@@ -226,9 +226,7 @@ void SystemMenuModelBuilder::BuildSystemMenuForBrowserWindow(
+         IDS_SWITCH_TO_VERTICAL_TAB;
+ #endif
+     if (display_vertical_tabs) {
+-      model->AddItemWithStringId(IDC_TOGGLE_VERTICAL_TABS,
+-                                 switch_to_horizontal_id);
+-
++      // Goatai: sem opção horizontal; auto-expand é obrigatório.
+       model->AddItemWithStringId(IDC_TOGGLE_VERTICAL_TABS_COLLAPSE,
+                                  controller->IsCollapsed()
+                                      ? IDS_EXPAND_VERTICAL_TABS
+@@ -237,15 +235,6 @@ void SystemMenuModelBuilder::BuildSystemMenuForBrowserWindow(
+           model->GetIndexOfCommandId(IDC_TOGGLE_VERTICAL_TABS_COLLAPSE).value(),
+           kToggleVerticalTabsCollapseElementId);
+ 
+-      model->AddItemWithStringId(
+-          IDC_TOGGLE_VERTICAL_TABS_EXPAND_ON_HOVER,
+-          controller->IsExpandOnHoverEnabled()
+-              ? IDS_VERTICAL_TABS_DISABLE_EXPAND_ON_HOVER
+-              : IDS_VERTICAL_TABS_ENABLE_EXPAND_ON_HOVER);
+-      model->SetElementIdentifierAt(
+-          model->GetIndexOfCommandId(IDC_TOGGLE_VERTICAL_TABS_EXPAND_ON_HOVER)
+-              .value(),
+-          kToggleVerticalTabsExpandOnHoverElementId);
+     } else {
+       model->AddItemWithStringId(IDC_TOGGLE_VERTICAL_TABS,
+                                  switch_to_vertical_id);
+@@ -256,9 +245,6 @@ void SystemMenuModelBuilder::BuildSystemMenuForBrowserWindow(
+           model->GetIndexOfCommandId(IDC_TOGGLE_VERTICAL_TABS).value(),
+           show_badge, ui::NewBadgeType::kNew);
+     }
+-    model->SetElementIdentifierAt(
+-        model->GetIndexOfCommandId(IDC_TOGGLE_VERTICAL_TABS).value(),
+-        kToggleVerticalTabsElementId);
+ 
+     model->AddItemWithStringId(IDC_VERTICAL_TABS_SEND_FEEDBACK,
+                                IDS_VERTICAL_TABS_SEND_FEEDBACK);
 diff --git a/chrome/browser/ui/views/frame/vertical_tab_strip_folder_bar.cc b/chrome/browser/ui/views/frame/vertical_tab_strip_folder_bar.cc
 new file mode 100644
-index 0000000000..19d2a05954
+index 0000000000..922780152d
 --- /dev/null
 +++ b/chrome/browser/ui/views/frame/vertical_tab_strip_folder_bar.cc
-@@ -0,0 +1,852 @@
+@@ -0,0 +1,866 @@
 +// Copyright 2026 Goatai. All rights reserved.
 +// Use of this source code is governed by a BSD-style license.
 +
@@ -16055,10 +16168,12 @@ index 0000000000..19d2a05954
 +// ---------------------------------------------------------------------------
 +// Tiles
 +
-+class GoataiBaseTile : public views::View {
++class GoataiBaseTile : public views::View,
++                      public views::ContextMenuController {
 + public:
 +  GoataiBaseTile(VerticalTabStripFolderBar* bar, const BookmarkNode* node)
 +      : bar_(bar), node_(node) {
++    set_context_menu_controller(this);
 +    SetAccessibleRole(ax::mojom::Role::kButton);
 +    GetViewAccessibility().SetName(LabelForNode(node));
 +    SetTooltipText(LabelForNode(node));
@@ -16075,10 +16190,6 @@ index 0000000000..19d2a05954
 +  }
 +
 +  bool OnMousePressed(const ui::MouseEvent& event) override {
-+    if (event.IsOnlyRightMouseButton()) {
-+      ShowContextMenu(event.location());
-+      return true;
-+    }
 +    if (!event.IsOnlyLeftMouseButton()) {
 +      return false;
 +    }
@@ -16127,6 +16238,15 @@ index 0000000000..19d2a05954
 +  virtual void Activate() = 0;
 +  virtual void PaintContent(gfx::Canvas* canvas, const gfx::Rect& content) = 0;
 +  virtual void ShowContextMenu(const gfx::Point& point) {}
++
++  // views::ContextMenuController:
++  void ShowContextMenuForViewImpl(views::View* source,
++                                  const gfx::Point& point,
++                                  ui::mojom::MenuSourceType source_type) override {
++    gfx::Point local = point;
++    ConvertPointFromScreen(this, &local);
++    ShowContextMenu(local);
++  }
 +
 +  void OnPaint(gfx::Canvas* canvas) override {
 +    const gfx::Rect bounds = GetLocalBounds();
@@ -16261,17 +16381,20 @@ index 0000000000..19d2a05954
 +  void Activate() override { ShowMenu(); }
 +
 +  void ShowContextMenu(const gfx::Point& point) override {
-+    NodeContextMenuDelegate delegate(bar_, node_);
-+    ui::SimpleMenuModel model(&delegate);
-+    model.AddItem(NodeContextMenuDelegate::kOpenAll, u"Open all");
-+    model.AddItem(NodeContextMenuDelegate::kPinHere, u"Pin current tab here");
-+    model.AddSeparator(ui::NORMAL_SEPARATOR);
-+    model.AddItem(NodeContextMenuDelegate::kDelete, u"Delete folder");
-+    views::MenuRunner runner(&model, views::MenuRunner::HAS_MNEMONICS);
++    node_menu_delegate_ = std::make_unique<NodeContextMenuDelegate>(bar_, node_);
++    menu_model_ = std::make_unique<ui::SimpleMenuModel>(node_menu_delegate_.get());
++    menu_model_->AddItem(NodeContextMenuDelegate::kOpenAll, u"Open all");
++    menu_model_->AddItem(NodeContextMenuDelegate::kPinHere,
++                         u"Pin current tab here");
++    menu_model_->AddSeparator(ui::NORMAL_SEPARATOR);
++    menu_model_->AddItem(NodeContextMenuDelegate::kDelete, u"Delete folder");
++    menu_runner_ = std::make_unique<views::MenuRunner>(
++        menu_model_.get(), views::MenuRunner::HAS_MNEMONICS);
 +    auto lock = bar_->AcquireKeepExpandedLock();
-+    runner.RunMenuAt(GetWidget(), nullptr, gfx::Rect(point, gfx::Size()),
-+                     views::MenuAnchorPosition::kTopLeft,
-+                     ui::mojom::MenuSourceType::kMouse);
++    menu_runner_->RunMenuAt(GetWidget(), nullptr,
++                            gfx::Rect(point, gfx::Size()),
++                            views::MenuAnchorPosition::kTopLeft,
++                            ui::mojom::MenuSourceType::kMouse);
 +  }
 +
 +  void PaintContent(gfx::Canvas* canvas, const gfx::Rect& content) override {
@@ -16320,6 +16443,7 @@ index 0000000000..19d2a05954
 +
 + private:
 +  std::unique_ptr<NodeMenuDelegate> menu_delegate_;
++  std::unique_ptr<NodeContextMenuDelegate> node_menu_delegate_;
 +  std::unique_ptr<ui::SimpleMenuModel> menu_model_;
 +  std::unique_ptr<views::MenuRunner> menu_runner_;
 +};
@@ -16372,6 +16496,7 @@ index 0000000000..19d2a05954
 +    BrowserWindowInterface* browser)
 +    : profile_(profile), browser_(browser) {
 +  SetNotifyEnterExitOnChild(true);
++  set_context_menu_controller(this);
 +  model_ = BookmarkModelFactory::GetForBrowserContext(profile_);
 +  if (model_) {
 +    model_->AddObserver(this);
@@ -16669,16 +16794,18 @@ index 0000000000..19d2a05954
 +
 +void VerticalTabStripFolderBar::ShowBarContextMenu(views::View* source,
 +                                                   const gfx::Point& point) {
-+  BarMenuDelegate delegate(this);
-+  ui::SimpleMenuModel model(&delegate);
-+  model.AddItem(BarMenuDelegate::kPinCurrent, u"Pin current tab");
-+  model.AddSeparator(ui::NORMAL_SEPARATOR);
-+  model.AddItem(BarMenuDelegate::kNewFolder, u"New folder");
-+  views::MenuRunner runner(&model, views::MenuRunner::HAS_MNEMONICS);
++  bar_menu_delegate_ = std::make_unique<BarMenuDelegate>(this);
++  bar_menu_model_ =
++      std::make_unique<ui::SimpleMenuModel>(bar_menu_delegate_.get());
++  bar_menu_model_->AddItem(BarMenuDelegate::kPinCurrent, u"Pin current tab");
++  bar_menu_model_->AddSeparator(ui::NORMAL_SEPARATOR);
++  bar_menu_model_->AddItem(BarMenuDelegate::kNewFolder, u"New folder");
++  bar_menu_runner_ = std::make_unique<views::MenuRunner>(
++      bar_menu_model_.get(), views::MenuRunner::HAS_MNEMONICS);
 +  auto lock = AcquireKeepExpandedLock();
-+  runner.RunMenuAt(source->GetWidget(), nullptr,
-+                   gfx::Rect(point, gfx::Size()), views::MenuAnchorPosition::kTopLeft,
-+                   ui::mojom::MenuSourceType::kMouse);
++  bar_menu_runner_->RunMenuAt(
++      source->GetWidget(), nullptr, gfx::Rect(point, gfx::Size()),
++      views::MenuAnchorPosition::kTopLeft, ui::mojom::MenuSourceType::kMouse);
 +}
 +
 +void VerticalTabStripFolderBar::ShowContextMenuForViewImpl(
@@ -16750,10 +16877,10 @@ index 0000000000..19d2a05954
 +}
 diff --git a/chrome/browser/ui/views/frame/vertical_tab_strip_folder_bar.h b/chrome/browser/ui/views/frame/vertical_tab_strip_folder_bar.h
 new file mode 100644
-index 0000000000..52ea987a14
+index 0000000000..1a7e84c94d
 --- /dev/null
 +++ b/chrome/browser/ui/views/frame/vertical_tab_strip_folder_bar.h
-@@ -0,0 +1,129 @@
+@@ -0,0 +1,137 @@
 +// Copyright 2026 Goatai. All rights reserved.
 +// Use of this source code is governed by a BSD-style license.
 +
@@ -16767,12 +16894,17 @@ index 0000000000..52ea987a14
 +#include "base/memory/raw_ptr.h"
 +#include "base/timer/timer.h"
 +#include "components/bookmarks/browser/bookmark_model_observer.h"
++#include "ui/menus/simple_menu_model.h"
 +#include "chrome/browser/ui/views/tabs/dragging/tab_drag_target.h"
 +#include "ui/views/context_menu_controller.h"
 +#include "ui/base/mojom/menu_source_type.mojom-forward.h"
 +#include "ui/views/view.h"
 +
 +class BrowserWindowInterface;
++
++namespace ui {
++class SimpleMenuModel;
++}  // namespace ui
 +class ExpandOnHoverLock;
 +class TabDragContext;
 +class Profile;
@@ -16878,6 +17010,9 @@ index 0000000000..52ea987a14
 +  raw_ptr<const bookmarks::BookmarkNode> root_ = nullptr;
 +  raw_ptr<const bookmarks::BookmarkNode> tab_drag_folder_ = nullptr;
 +  base::OnceClosureList on_will_destroy_callback_list_;
++  std::unique_ptr<ui::SimpleMenuModel::Delegate> bar_menu_delegate_;
++  std::unique_ptr<ui::SimpleMenuModel> bar_menu_model_;
++  std::unique_ptr<views::MenuRunner> bar_menu_runner_;
 +  bool rebuilding_ = false;
 +  base::OneShotTimer rebuild_timer_;
 +};
@@ -17010,10 +17145,20 @@ index 5ef11d599e..8fcd975487 100644
  
  void TabDragHandler::SetTabDetached(views::View* view) {}
 diff --git a/chrome/browser/ui/views/tabs/dragging/tab_drag_controller.cc b/chrome/browser/ui/views/tabs/dragging/tab_drag_controller.cc
-index 04187c49e6..3928b1191b 100644
+index 04187c49e6..31ad427f87 100644
 --- a/chrome/browser/ui/views/tabs/dragging/tab_drag_controller.cc
 +++ b/chrome/browser/ui/views/tabs/dragging/tab_drag_controller.cc
-@@ -1834,6 +1834,9 @@ void TabDragController::DetachAndAttachToNewContext(
+@@ -1349,6 +1349,9 @@ void TabDragController::OnTabThumbnailAvailable(
+ TabDragController::Liveness TabDragController::StartSystemDnDSessionIfNecessary(
+     TabDragContext* context,
+     gfx::Point point_in_screen) {
++  // Goatai: nunca iniciar DnD de sistema ao arrastar abas/Janela. No Wayland
++  // isso pode entregar a URL a outro navegador e abrir uma janela nova.
++  return Liveness::kAlive;
+   CHECK(ShouldDragWindowUsingSystemDnD());
+   CHECK(ui::ResourceBundle::HasSharedInstance());
+   current_state_ = DragState::kDraggingUsingSystemDnD;
+@@ -1834,6 +1837,9 @@ void TabDragController::DetachAndAttachToNewContext(
  TabDragController::Liveness
  TabDragController::DetachIntoNewBrowserAndRunMoveLoop(
      gfx::Point point_in_screen) {
