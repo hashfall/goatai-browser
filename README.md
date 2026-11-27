@@ -47,7 +47,8 @@ treat_warnings_as_errors = false
 - [x] abas verticais estilo Zen/Arc (recolhida por padrão, expande no hover)
 - [x] folders de pins no topo da sidebar (drag & drop para mover pins)
 - [x] extensões padrão (OpenCode Browse, uBlock Origin Lite, Tampermonkey)
-- [ ] instalação empacotada (`.desktop`, AppImage/deb)
+- [x] atalho `.desktop` + ícones no menu de aplicativos
+- [ ] instalação empacotada (AppImage/deb)
 - [ ] ajustes de UX do NTP (wallpaper / atalhos)
 
 ## Extensões padrão
@@ -67,3 +68,13 @@ treat_warnings_as_errors = false
 
 Obs.: o uBlock Origin clássico é MV2 e o Chromium 160 o desabilita
 (`ShouldDisableLegacyExtensions()`); a versão MV3 oficial é o uBlock Origin Lite.
+
+## Atalho no menu
+
+```bash
+./scripts/install-desktop.sh
+```
+
+Instala `~/.local/share/applications/goatai.desktop` (nome **Goatai**, ícone
+`goatai`, perfil `.run/profile`) e os PNGs em
+`~/.local/share/icons/hicolor/*/apps/goatai.png`.
