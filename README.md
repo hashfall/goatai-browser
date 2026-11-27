@@ -234,3 +234,17 @@ mouse não está sobre ela (animação de 500 ms, sem fade). Para trazê-la de v
 Ela permanece visível enquanto a omnibox ou qualquer menu/bolha da barra
 estiverem abertos, e também enquanto o mouse estiver sobre ela. Em fullscreen
 o auto-hide é desligado (o modo imersivo do Chromium assume).
+
+## AppImage (Linux)
+
+```bash
+./scripts/package-appimage.sh
+```
+
+Gera `dist/Goatai-<versão>-x86_64.AppImage` (~275 MB), com binário, libs
+componentizadas, recursos, locales (en-US/pt-BR/es), extensões padrão e a
+extensão Goatai IA. O perfil fica em `~/.config/goatai/profile` (ou
+`GOATAI_USER_DATA_DIR`). Se não houver FUSE2:
+`APPIMAGE_EXTRACT_AND_RUN=1 ./Goatai-...AppImage`.
+
+Detalhes: `docs/PACKAGING_APPIMAGE.md`.
