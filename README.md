@@ -1,6 +1,6 @@
 # GoatAI Browser
 
-**Versão atual: v0.1.0** — Chromium 160.0.8187.0
+**Versão atual: v0.1.1** — Chromium 160.0.8187.0
 
 Navegador baseado no Chromium (upstream, sem histórico), com branding Goatai,
 tema roxo/rosa, abas verticais e folders de pins com perfis de cor.
@@ -9,6 +9,14 @@ tema roxo/rosa, abas verticais e folders de pins com perfis de cor.
 
 - `VERSION` / tag git `v0.1.0`
 - Commit de referência: o commit imediatamente anterior à tag
+
+### v0.1.1
+
+- Corrige crash ao soltar aba no folder (dangling raw_ptr no chip de drag)
+- Corrige drag com uma única aba (ramo "mover janela" retornava antes do drag)
+- Mantém system DnD de aba desligado: nunca destaca para outra janela
+- Dropdown do folder com favicon + nome + X alinhado
+- Documenta que o drag de aba → folder funciona
 
 ### Funcionalidades em v0.1.0
 
