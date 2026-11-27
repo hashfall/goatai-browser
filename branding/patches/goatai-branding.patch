@@ -17460,10 +17460,10 @@ index 581402036f..6111061bb9 100644
                                 IDS_VERTICAL_TABS_SEND_FEEDBACK);
 diff --git a/chrome/browser/ui/views/frame/toolbar_auto_hide.cc b/chrome/browser/ui/views/frame/toolbar_auto_hide.cc
 new file mode 100644
-index 0000000000..231023e538
+index 0000000000..68e0901e1f
 --- /dev/null
 +++ b/chrome/browser/ui/views/frame/toolbar_auto_hide.cc
-@@ -0,0 +1,368 @@
+@@ -0,0 +1,392 @@
 +// Copyright 2026 Goatai. All rights reserved.
 +// Use of this source code is governed by a BSD-style license.
 +
@@ -17519,14 +17519,32 @@ index 0000000000..231023e538
 +  if (focus_manager_) {
 +    focus_manager_->AddFocusChangeListener(this);
 +  }
++  widget_observation_.Observe(widget);
 +}
 +
 +ToolbarAutoHideController::~ToolbarAutoHideController() {
++  Shutdown();
++}
++
++void ToolbarAutoHideController::OnWidgetDestroying(views::Widget* widget) {
++  Shutdown();
++}
++
++void ToolbarAutoHideController::Shutdown() {
++  if (shutting_down_) {
++    return;
++  }
++  shutting_down_ = true;
 +  hide_timer_.Stop();
 +  animation_.Stop();
++  event_monitor_.reset();
 +  if (focus_manager_) {
 +    focus_manager_->RemoveFocusChangeListener(this);
++    focus_manager_ = nullptr;
 +  }
++  widget_observation_.Reset();
++  toolbar_ = nullptr;
++  browser_view_ = nullptr;
 +}
 +
 +bool ToolbarAutoHideController::ShouldSuspend() const {
@@ -17669,6 +17687,9 @@ index 0000000000..231023e538
 +}
 +
 +void ToolbarAutoHideController::FinishAnimation() {
++  if (shutting_down_ || !browser_view_ || !toolbar_) {
++    return;
++  }
 +  const bool hidden = state_ == State::kHiding;
 +  browser_view_->SetToolbarAutoHideHeight(std::nullopt);
 +  if (hidden) {
@@ -17689,6 +17710,9 @@ index 0000000000..231023e538
 +
 +void ToolbarAutoHideController::AnimationProgressed(
 +    const gfx::Animation* animation) {
++  if (shutting_down_ || !browser_view_ || !toolbar_) {
++    return;
++  }
 +  const double value = animation_.GetCurrentValue();
 +  const int height = static_cast<int>(std::lround(full_height_ * value));
 +  browser_view_->SetToolbarAutoHideHeight(height);
@@ -17834,10 +17858,10 @@ index 0000000000..231023e538
 +}
 diff --git a/chrome/browser/ui/views/frame/toolbar_auto_hide.h b/chrome/browser/ui/views/frame/toolbar_auto_hide.h
 new file mode 100644
-index 0000000000..2a3c7bceb4
+index 0000000000..c2bd8d6b5f
 --- /dev/null
 +++ b/chrome/browser/ui/views/frame/toolbar_auto_hide.h
-@@ -0,0 +1,80 @@
+@@ -0,0 +1,90 @@
 +// Copyright 2026 Goatai. All rights reserved.
 +// Use of this source code is governed by a BSD-style license.
 +
@@ -17847,11 +17871,13 @@ index 0000000000..2a3c7bceb4
 +#include <memory>
 +
 +#include "base/memory/raw_ptr.h"
++#include "base/scoped_observation.h"
 +#include "base/timer/timer.h"
 +#include "ui/events/event_observer.h"
 +#include "ui/gfx/animation/animation_delegate.h"
 +#include "ui/gfx/animation/slide_animation.h"
 +#include "ui/views/focus/focus_manager.h"
++#include "ui/views/widget/widget_observer.h"
 +
 +class BrowserView;
 +class ToolbarView;
@@ -17865,6 +17891,7 @@ index 0000000000..2a3c7bceb4
 +// omnibox ou ao abrir menus/bolhas da toolbar (o conteúdo deixa de ter foco).
 +class ToolbarAutoHideController : public ui::EventObserver,
 +                                  public views::FocusChangeListener,
++                                  public views::WidgetObserver,
 +                                  public gfx::AnimationDelegate {
 + public:
 +  ToolbarAutoHideController(BrowserView* browser_view, ToolbarView* toolbar);
@@ -17881,6 +17908,9 @@ index 0000000000..2a3c7bceb4
 +                         views::View* focused_now) override;
 +  void OnDidChangeFocus(views::View* focused_before,
 +                        views::View* focused_now) override;
++
++  // views::WidgetObserver:
++  void OnWidgetDestroying(views::Widget* widget) override;
 +
 +  // gfx::AnimationDelegate:
 +  void AnimationProgressed(const gfx::Animation* animation) override;
@@ -17901,6 +17931,7 @@ index 0000000000..2a3c7bceb4
 +  void HideToolbarIfAllowed();
 +  void EnsureLayer();
 +  void FinishAnimation();
++  void Shutdown();
 +
 +  raw_ptr<BrowserView> browser_view_;
 +  raw_ptr<ToolbarView> toolbar_;
@@ -17911,6 +17942,9 @@ index 0000000000..2a3c7bceb4
 +  gfx::SlideAnimation animation_{this};
 +  int full_height_ = 0;
 +  bool created_layer_ = false;
++  bool shutting_down_ = false;
++  base::ScopedObservation<views::Widget, views::WidgetObserver>
++      widget_observation_{this};
 +  State state_ = State::kIdle;
 +  // Botão esquerdo pressionado: o auto-hide fica congelado para não mudar o
 +  // layout durante cliques segurados, seleção ou drags (folder/pin/aba).
@@ -17920,10 +17954,10 @@ index 0000000000..2a3c7bceb4
 +#endif  // CHROME_BROWSER_UI_VIEWS_FRAME_TOOLBAR_AUTO_HIDE_H_
 diff --git a/chrome/browser/ui/views/frame/vertical_tab_strip_folder_bar.cc b/chrome/browser/ui/views/frame/vertical_tab_strip_folder_bar.cc
 new file mode 100644
-index 0000000000..3f13fd0524
+index 0000000000..e784c82f05
 --- /dev/null
 +++ b/chrome/browser/ui/views/frame/vertical_tab_strip_folder_bar.cc
-@@ -0,0 +1,1420 @@
+@@ -0,0 +1,1447 @@
 +// Copyright 2026 Goatai. All rights reserved.
 +// Use of this source code is governed by a BSD-style license.
 +
@@ -18511,15 +18545,8 @@ index 0000000000..3f13fd0524
 +    if (!node_) {
 +      return;
 +    }
-+    // Goatai: mantém a sidebar expandida durante o drag, como o menu de
-+    // contexto faz. Sem isso, qualquer evento (desativação da janela, foco,
-+    // fim do hover) colapsa o folder bar no meio do arrasto, derrubando os
-+    // alvos de drop. O lock é liberado em OnDragDone (fim do DnD).
-+    drag_lock_ = bar_->AcquireKeepExpandedLock();
 +    bookmarks::BookmarkNodeData(node_).Write(bar_->profile()->GetPath(), data);
 +  }
-+
-+  void OnDragDone() override { drag_lock_.reset(); }
 +
 + protected:
 +  virtual void Activate() = 0;
@@ -18555,8 +18582,6 @@ index 0000000000..3f13fd0524
 +  bool hovered_ = false;
 +  bool pressed_ = false;
 +  bool drop_hovered_ = false;
-+  // Segura a expansão por hover enquanto um drag de folder/pin está ativo.
-+  std::unique_ptr<ExpandOnHoverLock> drag_lock_;
 +};
 +
 +class GoataiPinTile : public GoataiBaseTile {
@@ -18877,6 +18902,11 @@ index 0000000000..3f13fd0524
 +  Rebuild();
 +}
 +
++void VerticalTabStripFolderBar::AddedToWidget() {
++  views::View::AddedToWidget();
++  widget_observation_.Observe(GetWidget());
++}
++
 +VerticalTabStripFolderBar::~VerticalTabStripFolderBar() {
 +  on_will_destroy_callback_list_.Notify();
 +  if (model_) {
@@ -19127,6 +19157,37 @@ index 0000000000..3f13fd0524
 +  return region->GetExpandOnHoverLock(ExpandOnHoverLockType::kKeepExpanded);
 +}
 +
++void VerticalTabStripFolderBar::OnWidgetDragDropWillStart(
++    views::Widget* widget) {
++  // Mantém a sidebar expandida durante o DnD de folder/pin, como o menu de
++  // contexto faz com o keep-expanded lock. Sem isso, desativar a janela no
++  // meio do arrasto colapsa o folder bar e destrói os alvos de drop.
++  //
++  // A aquisição é adiada para dentro do loop do DnD: adquirir aqui,
++  // síncrono, dispararia SetCollapsed(false)+Rebuild que destruiria a view
++  // de origem no prólogo do RunDragDropLoop (o Widget ainda usa a view
++  // depois de notificar os observers). Dentro do loop a remoção da view já
++  // é tratada pelo framework (dragged_view_ é anulado em
++  // ViewHierarchyChanged) e as tarefas de aplicação rodam no loop aninhado.
++  drag_active_ = true;
++  base::SequencedTaskRunner::GetCurrentDefault()->PostTask(
++      FROM_HERE, base::BindOnce(&VerticalTabStripFolderBar::AcquireDragLock,
++                                weak_factory_.GetWeakPtr()));
++}
++
++void VerticalTabStripFolderBar::OnWidgetDragDropCompleted(
++    views::Widget* widget) {
++  drag_active_ = false;
++  drag_lock_.reset();
++}
++
++void VerticalTabStripFolderBar::AcquireDragLock() {
++  // Se o drag já terminou antes da tarefa rodar, não segura nada.
++  if (drag_active_ && !drag_lock_) {
++    drag_lock_ = AcquireKeepExpandedLock();
++  }
++}
++
 +void VerticalTabStripFolderBar::OpenBookmark(const BookmarkNode* node) {
 +  if (!node || !node->is_url() || !browser_) {
 +    return;
@@ -19346,10 +19407,10 @@ index 0000000000..3f13fd0524
 +}
 diff --git a/chrome/browser/ui/views/frame/vertical_tab_strip_folder_bar.h b/chrome/browser/ui/views/frame/vertical_tab_strip_folder_bar.h
 new file mode 100644
-index 0000000000..2499670681
+index 0000000000..8505b54c38
 --- /dev/null
 +++ b/chrome/browser/ui/views/frame/vertical_tab_strip_folder_bar.h
-@@ -0,0 +1,153 @@
+@@ -0,0 +1,171 @@
 +// Copyright 2026 Goatai. All rights reserved.
 +// Use of this source code is governed by a BSD-style license.
 +
@@ -19361,6 +19422,8 @@ index 0000000000..2499670681
 +
 +#include "base/callback_list.h"
 +#include "base/memory/raw_ptr.h"
++#include "base/memory/weak_ptr.h"
++#include "base/scoped_observation.h"
 +#include "base/timer/timer.h"
 +#include "components/bookmarks/browser/bookmark_model_observer.h"
 +#include "components/tab_groups/tab_group_color.h"
@@ -19369,6 +19432,7 @@ index 0000000000..2499670681
 +#include "ui/views/context_menu_controller.h"
 +#include "ui/base/mojom/menu_source_type.mojom-forward.h"
 +#include "ui/views/view.h"
++#include "ui/views/widget/widget_observer.h"
 +
 +class BrowserWindowInterface;
 +
@@ -19398,7 +19462,8 @@ index 0000000000..2499670681
 +class VerticalTabStripFolderBar : public views::View,
 +                                  public bookmarks::BookmarkModelObserver,
 +                                  public views::ContextMenuController,
-+                                  public TabDragTarget {
++                                  public TabDragTarget,
++                                  public views::WidgetObserver {
 + public:
 +  VerticalTabStripFolderBar(Profile* profile, BrowserWindowInterface* browser);
 +  VerticalTabStripFolderBar(const VerticalTabStripFolderBar&) = delete;
@@ -19411,6 +19476,7 @@ index 0000000000..2499670681
 +      const views::SizeBounds& available_size) const override;
 +  void Layout(PassKey) override;
 +  void OnThemeChanged() override;
++  void AddedToWidget() override;
 +
 +  // bookmarks::BookmarkModelObserver:
 +  void BookmarkModelLoaded(bool ids_reassigned) override;
@@ -19477,6 +19543,12 @@ index 0000000000..2499670681
 +  // Mantém a sidebar expandida enquanto um menu/diálogo está aberto.
 +  std::unique_ptr<ExpandOnHoverLock> AcquireKeepExpandedLock();
 +
++  // views::WidgetObserver: segura a expansão por hover durante um drag-and-
++  // drop (folder/pin), como o menu de contexto faz, para o folder bar não
++  // colapsar/rebuildar no meio do arrasto (derrubando os alvos de drop).
++  void OnWidgetDragDropWillStart(views::Widget* widget) override;
++  void OnWidgetDragDropCompleted(views::Widget* widget) override;
++
 +  Profile* profile() const { return profile_; }
 +  bookmarks::BookmarkModel* model() const { return model_; }
 +  const bookmarks::BookmarkNode* root_folder() const { return root_; }
@@ -19486,6 +19558,7 @@ index 0000000000..2499670681
 +  void Rebuild();
 +  void ScheduleRebuild();
 +  void EnsureRootFolder();
++  void AcquireDragLock();
 +
 +  raw_ptr<Profile> profile_;
 +  raw_ptr<BrowserWindowInterface> browser_;
@@ -19500,6 +19573,12 @@ index 0000000000..2499670681
 +  bool collapsed_ = false;
 +  int uncollapsed_width_ = 240;
 +  base::OneShotTimer rebuild_timer_;
++  // Segura a expansão por hover durante um DnD de folder/pin.
++  std::unique_ptr<ExpandOnHoverLock> drag_lock_;
++  bool drag_active_ = false;
++  base::ScopedObservation<views::Widget, views::WidgetObserver>
++      widget_observation_{this};
++  base::WeakPtrFactory<VerticalTabStripFolderBar> weak_factory_{this};
 +};
 +
 +#endif  // CHROME_BROWSER_UI_VIEWS_FRAME_VERTICAL_TAB_STRIP_FOLDER_BAR_H_

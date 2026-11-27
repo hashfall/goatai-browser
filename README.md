@@ -1,6 +1,6 @@
 # GoatAI Browser
 
-**Versão atual: v0.6.1** — Chromium 160.0.8187.0
+**Versão atual: v0.6.2** — Chromium 160.0.8187.0
 
 Navegador baseado no Chromium (upstream, sem histórico), com branding Goatai,
 tema retrô vaporwave (cantos retos, bordas neon), abas verticais e
@@ -8,8 +8,15 @@ folders de pins com perfis de cor.
 
 ## Versão
 
-- `VERSION` / tag git `v0.6.1`
+- `VERSION` / tag git `v0.6.2`
 - Commit de referência: o commit imediatamente anterior à tag
+
+### v0.6.2
+
+- Corrige o crash no fechamento que fazia aparecer "Restore pages? Chromium
+  didn't shut down correctly" a cada vez (raw_ptr pendurado no
+  `ToolbarAutoHideController`; agora observa o Widget e limpa no
+  `OnWidgetDestroying`)
 
 ### v0.6.1
 

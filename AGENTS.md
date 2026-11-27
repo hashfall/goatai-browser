@@ -132,6 +132,10 @@ git -C src apply --reverse --check ../branding/patches/goatai-branding.patch
 - O auto-hide é congelado enquanto o botão esquerdo está pressionado/drag:
   `mouse_button_down_` no `ToolbarAutoHideController` (press/release/move com
   `EF_LEFT_MOUSE_BUTTON`); evita esconder a barra no meio do DnD.
+- `ToolbarAutoHideController` é `views::WidgetObserver`: no
+  `OnWidgetDestroying` chama `Shutdown()` (remove o focus listener, destrói o
+  EventMonitor e zera os `raw_ptr`), senão o destrutor liberava `raw_ptr`
+  pendurado e o Chromium abortava no fechamento ("Restore pages?").
 - Correções de crash/drag em `tab_drag_controller.cc`.
 
 ### Auto-hide da toolbar (estilo drawer)
