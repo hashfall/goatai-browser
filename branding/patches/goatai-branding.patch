@@ -15912,15 +15912,17 @@ index aaa4eb7779..7f897a0865 100644
            NtpCustomBackgroundServiceFactory::GetForProfile(
                browser->GetProfile()),
 diff --git a/chrome/browser/ui/views/frame/BUILD.gn b/chrome/browser/ui/views/frame/BUILD.gn
-index fac2f4211e..0188305037 100644
+index fac2f4211e..0f3f6b0e9c 100644
 --- a/chrome/browser/ui/views/frame/BUILD.gn
 +++ b/chrome/browser/ui/views/frame/BUILD.gn
-@@ -532,7 +532,11 @@ source_set("horizontal_tab_strip_region_view") {
+@@ -532,7 +532,13 @@ source_set("horizontal_tab_strip_region_view") {
  
  source_set("vertical_tab_strip_region_view") {
    public = [ "vertical_tab_strip_region_view.h" ]
 -  sources = [ "vertical_tab_strip_region_view.cc" ]
 +  sources = [
++    "goatai_tab_drag_chip.cc",
++    "goatai_tab_drag_chip.h",
 +    "vertical_tab_strip_folder_bar.cc",
 +    "vertical_tab_strip_folder_bar.h",
 +    "vertical_tab_strip_region_view.cc",
@@ -15928,7 +15930,7 @@ index fac2f4211e..0188305037 100644
    public_deps = [
      ":base_tab_strip_region_view",
      "//base",
-@@ -545,13 +549,16 @@ source_set("vertical_tab_strip_region_view") {
+@@ -545,13 +551,16 @@ source_set("vertical_tab_strip_region_view") {
      "//chrome/browser/ui/views/tabs/shared",
      "//chrome/browser/ui/views/tabs/vertical",
      "//components/tabs:public",
@@ -15945,7 +15947,7 @@ index fac2f4211e..0188305037 100644
      ":browser_view_header",
      ":custom_corners_background",
      ":frame",
-@@ -562,6 +569,8 @@ source_set("vertical_tab_strip_region_view") {
+@@ -562,6 +571,8 @@ source_set("vertical_tab_strip_region_view") {
      "//chrome/browser/ui:browser_actions",
      "//chrome/browser/ui:browser_element_identifiers",
      "//chrome/browser/ui:layout_constants",
@@ -15954,11 +15956,12 @@ index fac2f4211e..0188305037 100644
      "//chrome/browser/ui:ui_features",
      "//chrome/browser/ui/actions:actions_headers",
      "//chrome/browser/ui/browser_window",
-@@ -572,7 +581,12 @@ source_set("vertical_tab_strip_region_view") {
+@@ -572,7 +583,13 @@ source_set("vertical_tab_strip_region_view") {
      "//chrome/browser/ui/views/tabs/common:impl",
      "//chrome/browser/ui/views/tabs/organizer",
      "//chrome/browser/ui/web_applications",
 +    "//components/bookmarks/browser",
++    "//components/favicon/content",
 +    "//components/vector_icons",
 +    "//content/public/browser",
 +    "//ui/base/clipboard",
@@ -17637,10 +17640,44 @@ index b59c975477..fc6f0d38fd 100644
    raw_ptr<views::Separator> top_button_separator_ = nullptr;
    raw_ptr<VerticalTabStripBottomContainer> bottom_button_container_ = nullptr;
 diff --git a/chrome/browser/ui/views/tabs/dragging/tab_drag_controller.cc b/chrome/browser/ui/views/tabs/dragging/tab_drag_controller.cc
-index 04187c49e6..98fe42ea72 100644
+index 04187c49e6..50fbcc8d54 100644
 --- a/chrome/browser/ui/views/tabs/dragging/tab_drag_controller.cc
 +++ b/chrome/browser/ui/views/tabs/dragging/tab_drag_controller.cc
-@@ -1116,6 +1116,11 @@ TabDragController::Liveness TabDragController::ContinueDragging(
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#include "chrome/browser/ui/views/frame/goatai_tab_drag_chip.h"
+ #include "chrome/browser/ui/views/tabs/dragging/tab_drag_controller.h"
+ 
+ #include <algorithm>
+@@ -427,6 +428,7 @@ TabDragController::TabDragController()
+ }
+ 
+ TabDragController::~TabDragController() {
++  GoataiTabDragChip::Get()->Hide();
+   if (g_tab_drag_controller == this) {
+     g_tab_drag_controller = nullptr;
+   }
+@@ -1096,6 +1098,17 @@ TabDragController::Liveness TabDragController::ContinueDragging(
+   }
+   last_point_in_screen_ = point_in_screen;
+ 
++  // Goatai: favicon da aba segue o cursor durante o arrasto.
++  if (views::Widget* drag_widget = GetAttachedBrowserWidget()) {
++    content::WebContents* dragged_contents = nullptr;
++    if (drag_data_.source_view_index_ < drag_data_.tab_drag_data_.size()) {
++      dragged_contents =
++          drag_data_.tab_drag_data_[drag_data_.source_view_index_].contents;
++    }
++    GoataiTabDragChip::Get()->Show(drag_widget, dragged_contents,
++                                   point_in_screen);
++  }
++
+   CHECK(attached_context_, base::NotFatalUntil::M162);
+ 
+   TabDragContext* target_context = source_context_;
+@@ -1116,6 +1129,11 @@ TabDragController::Liveness TabDragController::ContinueDragging(
      }
    }
  
@@ -17652,7 +17689,7 @@ index 04187c49e6..98fe42ea72 100644
    if (target_context != attached_context_) {
      is_dragging_new_browser_ = false;
      did_restore_window_ = false;
-@@ -1282,7 +1287,8 @@ TabDragController::Liveness TabDragController::DragBrowserToNewTabStrip(
+@@ -1282,7 +1300,8 @@ TabDragController::Liveness TabDragController::DragBrowserToNewTabStrip(
  }
  
  bool TabDragController::ShouldDragWindowUsingSystemDnD() {
@@ -17662,7 +17699,7 @@ index 04187c49e6..98fe42ea72 100644
  }
  
  void TabDragController::RequestTabThumbnail() {
-@@ -1457,6 +1463,11 @@ TabDragController::GetDragTargetForPoint(gfx::Point point_in_screen) {
+@@ -1457,6 +1476,11 @@ TabDragController::GetDragTargetForPoint(gfx::Point point_in_screen) {
    const Liveness state = GetLocalProcessWindow(
        point_in_screen, current_state_ == DragState::kDraggingWindow,
        &local_window);
@@ -17674,7 +17711,7 @@ index 04187c49e6..98fe42ea72 100644
    if (state == Liveness::kDeleted) {
      return std::tuple(Liveness::kDeleted, nullptr, nullptr);
    }
-@@ -1467,7 +1478,9 @@ TabDragController::GetDragTargetForPoint(gfx::Point point_in_screen) {
+@@ -1467,7 +1491,9 @@ TabDragController::GetDragTargetForPoint(gfx::Point point_in_screen) {
      TabDragContext* destination_tab_strip =
          browser_view->tab_strip_view()->GetDragContext();
      if (destination_tab_strip) {
@@ -17685,6 +17722,22 @@ index 04187c49e6..98fe42ea72 100644
          return std::tuple(Liveness::kAlive, destination_tab_strip, nullptr);
        } else if (TabDragTarget* candidate =
                       GetTabDragPointResolver()->GetDragTarget(
+@@ -2227,6 +2253,7 @@ void TabDragController::EndDragImpl(EndDragType type) {
+ }
+ 
+ void TabDragController::RevertDrag() {
++  GoataiTabDragChip::Get()->Hide();
+   CHECK(attached_context_);
+   CHECK(source_context_);
+ 
+@@ -2589,6 +2616,7 @@ void TabDragController::RevertSplitAt(size_t drag_index) {
+ }
+ 
+ void TabDragController::CompleteDrag() {
++  GoataiTabDragChip::Get()->Hide();
+   CHECK_NE(current_state_, DragState::kNotStarted);
+   CHECK(attached_context_);
+ 
 diff --git a/chrome/installer/linux/common/chromium-browser.info b/chrome/installer/linux/common/chromium-browser.info
 index 694581fc82..d85d25968f 100644
 --- a/chrome/installer/linux/common/chromium-browser.info

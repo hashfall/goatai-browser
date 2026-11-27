@@ -83,3 +83,10 @@ via `BookmarkModel::SetTitle`.
 Clique esquerdo abre um popup (widget TYPE_POPUP) abaixo do folder com:
 favicon + nome + **X** alinhado à direita para remover o pin. Clicar na linha
 abre o site. Fecha ao perder foco.
+
+### Feedback de arrasto de aba
+
+`goatai_tab_drag_chip.{h,cc}` adiciona um chip 36x36 com o favicon da aba
+seguindo o cursor durante qualquer arrasto de aba (view filha do BrowserView,
+`kViewIgnoredByLayoutKey`). Mostrado em `ContinueDragging` e escondido em
+CompleteDrag/RevertDrag/destrutor.

@@ -269,6 +269,10 @@ cp "$ROOT/branding/src/vertical_tab_strip_folder_bar.h" \
    "$SRC/chrome/browser/ui/views/frame/"
 cp "$ROOT/branding/src/vertical_tab_strip_folder_bar.cc" \
    "$SRC/chrome/browser/ui/views/frame/"
+cp "$ROOT/branding/src/goatai_tab_drag_chip.h" \
+   "$SRC/chrome/browser/ui/views/frame/"
+cp "$ROOT/branding/src/goatai_tab_drag_chip.cc" \
+   "$SRC/chrome/browser/ui/views/frame/"
 
 python3 - "$SRC" <<'PY'
 import sys
@@ -373,6 +377,8 @@ t = p.read_text()
 if "vertical_tab_strip_folder_bar.cc" not in t:
     t = t.replace('  sources = [ "vertical_tab_strip_region_view.cc" ]',
                   '  sources = [\n'
+                  '    "goatai_tab_drag_chip.cc",\n'
+                  '    "goatai_tab_drag_chip.h",\n'
                   '    "vertical_tab_strip_folder_bar.cc",\n'
                   '    "vertical_tab_strip_folder_bar.h",\n'
                   '    "vertical_tab_strip_region_view.cc",\n  ]')
@@ -390,6 +396,7 @@ if "vertical_tab_strip_folder_bar.cc" not in t:
     t = t.replace('    "//chrome/browser/ui/web_applications",\n    "//ui/base/dragdrop:types",',
                   '    "//chrome/browser/ui/web_applications",\n'
                   '    "//components/bookmarks/browser",\n'
+                  '    "//components/favicon/content",\n'
                   '    "//content/public/browser",\n'
                   '    "//ui/base/clipboard",\n'
                   '    "//ui/base/dragdrop:types",\n'
@@ -470,6 +477,36 @@ if "Goatai: alguns backends" not in t:
     local_window = attached_context_->GetWidget()->GetNativeWindow();
   }
 """, 1)
+
+if "Goatai: favicon da aba segue" not in t:
+    t = t.replace(
+        "  last_point_in_screen_ = point_in_screen;\n",
+        "  last_point_in_screen_ = point_in_screen;\n\n"
+        "  // Goatai: favicon da aba segue o cursor durante o arrasto.\n"
+        "  if (views::Widget* drag_widget = GetAttachedBrowserWidget()) {\n"
+        "    content::WebContents* dragged_contents = nullptr;\n"
+        "    if (drag_data_.source_view_index_ < drag_data_.tab_drag_data_.size()) {\n"
+        "      dragged_contents =\n"
+        "          drag_data_.tab_drag_data_[drag_data_.source_view_index_].contents;\n"
+        "    }\n"
+        "    GoataiTabDragChip::Get()->Show(drag_widget, dragged_contents,\n"
+        "                                   point_in_screen);\n"
+        "  }\n", 1)
+if "goatai_tab_drag_chip.h" not in t:
+    t = t.replace(
+        '#include "chrome/browser/ui/views/tabs/dragging/tab_drag_controller.h"',
+        '#include "chrome/browser/ui/views/frame/goatai_tab_drag_chip.h"\n'
+        '#include "chrome/browser/ui/views/tabs/dragging/tab_drag_controller.h"')
+if "GoataiTabDragChip::Get()->Hide();" not in t:
+    t = t.replace("TabDragController::~TabDragController() {\n",
+                  "TabDragController::~TabDragController() {\n"
+                  "  GoataiTabDragChip::Get()->Hide();\n")
+    t = t.replace("void TabDragController::RevertDrag() {\n",
+                  "void TabDragController::RevertDrag() {\n"
+                  "  GoataiTabDragChip::Get()->Hide();\n")
+    t = t.replace("void TabDragController::CompleteDrag() {\n",
+                  "void TabDragController::CompleteDrag() {\n"
+                  "  GoataiTabDragChip::Get()->Hide();\n")
 p.write_text(t)
 
 # 8) remove dos menus as opções de horizontal e de desligar auto-expand
