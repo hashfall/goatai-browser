@@ -46,5 +46,24 @@ treat_warnings_as_errors = false
 - [x] tema roxo/rosa (frame, toolbar, abas, NTP, Material primary/secondary)
 - [x] abas verticais estilo Zen/Arc (recolhida por padrão, expande no hover)
 - [x] folders de pins no topo da sidebar (drag & drop para mover pins)
+- [x] extensões padrão (OpenCode Browse, uBlock Origin Lite, Tampermonkey)
 - [ ] instalação empacotada (`.desktop`, AppImage/deb)
 - [ ] ajustes de UX do NTP (wallpaper / atalhos)
+
+## Extensões padrão
+
+`extensions/external_extensions.json` define as extensões pré-instaladas via
+`external_update_url` (baixadas do Chrome Web Store no primeiro uso do perfil):
+
+| Extensão | ID |
+| --- | --- |
+| OpenCode Browse | `mfnicocicmmlkpjnaffgihfjhdgjkdjg` |
+| uBlock Origin Lite | `ddkiahejlhfcafbddmgiahcphecmpfh` |
+| Tampermonkey | `dhdgffkkebhmkfjojejmpbldmpobfkfo` |
+
+`scripts/install-extensions.sh` copia o JSON para
+`src/out/Default/extensions/`, de onde o Chromium lê (`DIR_EXTERNAL_EXTENSIONS`).
+`build.sh` e `run.sh` chamam esse script automaticamente.
+
+Obs.: o uBlock Origin clássico é MV2 e o Chromium 160 o desabilita
+(`ShouldDisableLegacyExtensions()`); a versão MV3 oficial é o uBlock Origin Lite.
