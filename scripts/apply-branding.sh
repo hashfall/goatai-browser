@@ -263,3 +263,116 @@ print("chromium-browser.info ok")
 PY
 
 echo "pronto. rode ./scripts/build.sh"
+
+echo "== folders de pins (abas verticais)"
+cp "$ROOT/branding/src/vertical_tab_strip_folder_bar.h" \
+   "$SRC/chrome/browser/ui/views/frame/"
+cp "$ROOT/branding/src/vertical_tab_strip_folder_bar.cc" \
+   "$SRC/chrome/browser/ui/views/frame/"
+
+python3 - "$SRC" <<'PY'
+import sys
+from pathlib import Path
+
+src = Path(sys.argv[1])
+
+# 1) insere a barra de folders no topo da lista de abas
+p = src / "chrome/browser/ui/views/frame/vertical_tab_strip_region_view.cc"
+t = p.read_text()
+if "vertical_tab_strip_folder_bar.h" not in t:
+    t = t.replace(
+        '#include "chrome/browser/ui/views/frame/vertical_tab_strip_region_view.h"',
+        '#include "chrome/browser/ui/views/frame/vertical_tab_strip_region_view.h"\n'
+        '#include "chrome/browser/ui/views/frame/vertical_tab_strip_folder_bar.h"', 1)
+if "folder_bar_ = folder_bar.get();" not in t:
+    t = t.replace(
+        "  const int region_horizontal_padding =\n"
+        "      GetLayoutConstant(LayoutConstant::kVerticalTabStripHorizontalPadding);\n",
+        "  const int region_horizontal_padding =\n"
+        "      GetLayoutConstant(LayoutConstant::kVerticalTabStripHorizontalPadding);\n\n"
+        "  // Goatai: folders de pins fixados no topo da lista de abas.\n"
+        "  auto folder_bar = std::make_unique<VerticalTabStripFolderBar>(\n"
+        "      browser_view->browser()->GetProfile(), browser_view->browser());\n"
+        "  folder_bar_ = folder_bar.get();\n"
+        "  content_area_view_->AddChildViewAt(\n"
+        "      std::unique_ptr<views::View>(std::move(folder_bar)), 0);\n"
+        "  folder_bar_->SetProperty(\n"
+        "      views::kMarginsKey, gfx::Insets::VH(0, region_horizontal_padding));\n")
+if "Goatai: pins/folders só aparecem" not in t:
+    t = t.replace(
+        "  bool collapsed = state != tabs::VerticalTabStripCollapseState::kExpanded;\n",
+        "  bool collapsed = state != tabs::VerticalTabStripCollapseState::kExpanded;\n\n"
+        "  // Goatai: pins/folders só aparecem com a barra expandida.\n"
+        "  if (folder_bar_) {\n"
+        "    folder_bar_->SetVisible(!collapsed);\n"
+        "  }\n", 1)
+p.write_text(t)
+
+# 2) membro e include no header da region view
+p = src / "chrome/browser/ui/views/frame/vertical_tab_strip_region_view.h"
+t = p.read_text()
+if "class VerticalTabStripFolderBar;" not in t:
+    t = t.replace("class VerticalTabStripBottomContainer;",
+                  "class VerticalTabStripBottomContainer;\nclass VerticalTabStripFolderBar;")
+if "folder_bar_" not in t:
+    t = t.replace("  raw_ptr<views::View> content_area_view_ = nullptr;",
+                  "  raw_ptr<views::View> content_area_view_ = nullptr;\n"
+                  "  raw_ptr<VerticalTabStripFolderBar> folder_bar_ = nullptr;")
+p.write_text(t)
+
+# 3) BUILD.gn
+p = src / "chrome/browser/ui/views/frame/BUILD.gn"
+t = p.read_text()
+if "vertical_tab_strip_folder_bar.cc" not in t:
+    t = t.replace('  sources = [ "vertical_tab_strip_region_view.cc" ]',
+                  '  sources = [\n'
+                  '    "vertical_tab_strip_folder_bar.cc",\n'
+                  '    "vertical_tab_strip_folder_bar.h",\n'
+                  '    "vertical_tab_strip_region_view.cc",\n  ]')
+    t = t.replace('    "//components/tabs:public",\n    "//ui/base",',
+                  '    "//components/tabs:public",\n'
+                  '    "//ui/accessibility:ax_enums_mojo",\n    "//ui/base",')
+    t = t.replace('    "//ui/base/metadata",\n    "//ui/events",\n    "//ui/gfx/geometry",',
+                  '    "//ui/base/metadata",\n    "//ui/events",\n'
+                  '    "//ui/gfx",\n    "//ui/gfx/geometry",')
+    t = t.replace('    "//chrome/browser/ui:ui_features",\n    "//chrome/browser/ui/actions:actions_headers",',
+                  '    "//chrome/browser/bookmarks:impl",\n'
+                  '    "//chrome/browser/profiles:profile",\n'
+                  '    "//chrome/browser/ui:ui_features",\n'
+                  '    "//chrome/browser/ui/actions:actions_headers",')
+    t = t.replace('    "//chrome/browser/ui/web_applications",\n    "//ui/base/dragdrop:types",',
+                  '    "//chrome/browser/ui/web_applications",\n'
+                  '    "//components/bookmarks/browser",\n'
+                  '    "//content/public/browser",\n'
+                  '    "//ui/base/clipboard",\n'
+                  '    "//ui/base/dragdrop:types",\n'
+                  '    "//ui/color",')
+    p.write_text(t)
+
+# 4) expandir no hover sempre ligado, sem opção
+p = src / "chrome/browser/ui/tabs/vertical_tab_strip_state_controller_impl.cc"
+t = p.read_text()
+if "Goatai: expansão automática sempre ligada" not in t:
+    t = t.replace(
+        "  is_expand_on_hover_enabled_ =\n"
+        "      pref_service_->GetBoolean(prefs::kVerticalTabsExpandOnHoverEnabled);",
+        "  // Goatai: expansão automática sempre ligada.\n"
+        "  is_expand_on_hover_enabled_ = true;")
+    t = t.replace(
+        "bool VerticalTabStripStateControllerImpl::IsExpandOnHoverEnabled() const {\n"
+        "  return is_expand_on_hover_enabled_;\n}",
+        "bool VerticalTabStripStateControllerImpl::IsExpandOnHoverEnabled() const {\n"
+        "  // Goatai: expansão automática sempre ligada.\n  return true;\n}")
+p.write_text(t)
+
+# 5) esconde o toggle nas configurações
+p = src / "chrome/browser/resources/settings/appearance_page/appearance_page.html.ts"
+t = p.read_text()
+if 'hidden pref-key="vertical_tabs.expand_on_hover"' not in t:
+    t = t.replace('        <settings-toggle-button id="showVerticalTabsExpandOnHover"\n'
+                  '            pref-key="vertical_tabs.expand_on_hover"',
+                  '        <settings-toggle-button id="showVerticalTabsExpandOnHover"\n'
+                  '            hidden pref-key="vertical_tabs.expand_on_hover"')
+    p.write_text(t)
+print("folders/expand ok")
+PY

@@ -27,3 +27,13 @@ arquivos.
 - Short name: **GoatAI**
 - Empresa: GoatAI
 - Ícone base: `branding/icon.webp`
+
+## Folders de pins (sidebar)
+
+- Área no topo da barra vertical: subpastas de `Outros favoritos > Goatai Pins`
+  viram folders; bookmarks soltos viram pins.
+- Clique no folder: menu com os pins (abre em nova aba). Clique direito:
+  abrir tudo / apagar; clique no fundo da barra: novo folder, fixar aba atual.
+- Arrastar um pin para cima de um folder move o bookmark (drop nativo de
+  bookmarks do Chromium). Soltar no espaço vazio devolve para a raiz.
+- A barra fica oculta quando a sidebar está recolhida.

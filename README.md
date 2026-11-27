@@ -45,5 +45,6 @@ treat_warnings_as_errors = false
 - [x] branding Goatai (nome, ícones 1x/2x, NTP, strings, `.info`)
 - [x] tema roxo/rosa (frame, toolbar, abas, NTP, Material primary/secondary)
 - [x] abas verticais estilo Zen/Arc (recolhida por padrão, expande no hover)
+- [x] folders de pins no topo da sidebar (drag & drop para mover pins)
 - [ ] instalação empacotada (`.desktop`, AppImage/deb)
 - [ ] ajustes de UX do NTP (wallpaper / atalhos)
