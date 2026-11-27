@@ -117,3 +117,9 @@ ferramentas/scripts do Chromium. `run.sh` e o atalho `.desktop` usam `goatai`.
 - Associações: `goatai.desktop` é o padrão para `http`, `https`, `text/html` e
   `application/xhtml+xml` em `~/.config/mimeapps.list`
 - Fish: `BROWSER=goatai` em `~/.config/fish/config.fish`
+
+## Windows
+
+O Chromium não compila de Linux para Windows. Para uma build nativa no
+Windows, siga `docs/BUILD_WINDOWS.md` e use os scripts
+`scripts/windows/bootstrap.ps1` e `scripts/windows/build.ps1`.

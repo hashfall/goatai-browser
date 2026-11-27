@@ -1,0 +1,9 @@
+# Build Windows do Goatai (Chromium puro, sem LTO/PGO)
+is_debug = false
+is_component_build = false
+symbol_level = 1
+blink_symbol_level = 0
+chrome_pgo_phase = 0
+proprietary_codecs = true
+ffmpeg_branding = "Chrome"
+treat_warnings_as_errors = false
