@@ -1,14 +1,25 @@
 # GoatAI Browser
 
-**Versão atual: v0.1.1** — Chromium 160.0.8187.0
+**Versão atual: v0.2.0** — Chromium 160.0.8187.0
 
 Navegador baseado no Chromium (upstream, sem histórico), com branding Goatai,
-tema roxo/rosa, abas verticais e folders de pins com perfis de cor.
+tema retrô vaporwave (cantos retos, bordas neon), abas verticais e
+folders de pins com perfis de cor.
 
 ## Versão
 
-- `VERSION` / tag git `v0.1.0`
+- `VERSION` / tag git `v0.2.0`
 - Commit de referência: o commit imediatamente anterior à tag
+
+### v0.2.0
+
+- Tema retrô vaporwave: navy profundo, ciano neon e magenta
+- Cantos retos em todo o navegador (Views, WebUI e páginas internas)
+- Bordas/glow neon ciano na barra de endereço, chips, telhas e botões
+- New Tab Page com grade ciano, gradiente magenta e busca escura quadrada
+- Barra de endereço sem pill (foco retangular) e chips "AI Mode" quadrados
+- Tema de cor do perfil não sobrescreve mais as superfícies da NTP
+- Sidebar inicia expandida
 
 ### v0.1.1
 
