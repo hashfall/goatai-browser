@@ -10366,18 +10366,119 @@ index b384a078b6..c3148f4a67 100644
    ]
  
    extra_grdp_deps = [
+diff --git a/chrome/browser/resources/new_tab_page/action_chips/action_chips.css b/chrome/browser/resources/new_tab_page/action_chips/action_chips.css
+index 880fd51660..1c2912903e 100644
+--- a/chrome/browser/resources/new_tab_page/action_chips/action_chips.css
++++ b/chrome/browser/resources/new_tab_page/action_chips/action_chips.css
+@@ -58,7 +58,7 @@
+ .action-chip {
+   align-items: center;
+   background-color: var(--chip-background-color);
+-  border-radius: 16px;
++  border-radius: 0;
+   border: none;
+   cursor: pointer;
+   display: flex;
+@@ -86,7 +86,7 @@
+ }
+ 
+ :host([small-chips-enabled]) .action-chip {
+-  border-radius: 20px;
++  border-radius: 0;
+   box-sizing: border-box;
+   gap: 6px;
+   height: 40px;
+@@ -189,7 +189,7 @@
+ .action-chip-icon-container {
+   align-items: center;
+   align-self: flex-start;
+-  border-radius: 100%;
++  border-radius: 0;
+   display: flex;
+   height: 24px;
+   justify-content: center;
+@@ -198,7 +198,7 @@
+ }
+ 
+ .action-chip-recent-tab-favicon {
+-  border-radius: 2px;
++  border-radius: 0;
+   height: 16px;
+   width: 16px;
+ }
+@@ -381,3 +381,16 @@ cr-button>span {
+     --iron-icon-fill-color: HighlightText;
+   }
+ }
++
++/* stylelint-disable no-duplicate-selectors, rule-empty-line-before */
++/* Goatai vaporwave */
++.action-chip {
++  border: 1px solid #05d9e8;
++  border-radius: 0;
++  box-shadow: 0 0 10px rgba(5, 217, 232, .45);
++}
++.action-chip-icon-container,
++.action-chip-recent-tab-favicon {
++  border-radius: 0;
++}
++/* stylelint-enable */
 diff --git a/chrome/browser/resources/new_tab_page/app.css b/chrome/browser/resources/new_tab_page/app.css
-index 591b25cc23..3c685a8c9b 100644
+index 591b25cc23..303edf97b7 100644
 --- a/chrome/browser/resources/new_tab_page/app.css
 +++ b/chrome/browser/resources/new_tab_page/app.css
-@@ -617,4 +617,7 @@ ntp-lens-upload-dialog {
+@@ -308,8 +308,13 @@ svg {
+     --color-new-tab-page-composebox-submit-button-background);
+ 
+   --cr-composebox-background-color: var(--color-composebox-background);
+-  --cr-composebox-expanded-border-radius: 28px;
+-  --cr-composebox-submit-border-radius: 100px;
++  /* Goatai: AI Mode da NTP quadrado e escuro. */
++  --cr-composebox-expanded-border-radius: 0;
++  --cr-composebox-submit-border-radius: 0;
++  --cr-composebox-aim-button-inactive-background:
++      var(--color-composebox-background);
++  --cr-composebox-aim-button-inactive-color:
++      var(--color-composebox-type-ahead);
+   --cr-composebox-submit-height: 36px;
+   --cr-composebox-submit-icon-size: 24px;
+   --cr-composebox-submit-icon-offset: 0;
+@@ -617,4 +622,35 @@ ntp-lens-upload-dialog {
  
  :host(:not([show-background-image_])) #rhsContent {
    background-color: var(--color-new-tab-page-background);
 +  background-image:
-+      radial-gradient(circle at 18% 0%, rgba(124, 58, 237, .28), transparent 60%),
-+      radial-gradient(circle at 88% 6%, rgba(236, 72, 153, .20), transparent 55%);
++      linear-gradient(rgba(5, 217, 232, .10) 1px, transparent 1px),
++      linear-gradient(90deg, rgba(5, 217, 232, .10) 1px, transparent 1px),
++      linear-gradient(180deg, rgba(255, 42, 109, .16), transparent 60%);
++  background-size: 32px 32px, 32px 32px, 100% 100%;
++}
++
++/* stylelint-disable no-duplicate-selectors, rule-empty-line-before,
++   @stylistic/string-quotes */
++/* Goatai vaporwave: quadrado, neon ciano/magenta. */
++:host {
++  --cr-composebox-background-color: var(--color-composebox-background);
++  --color-search-animated-glow-background:
++      var(--color-composebox-background);
++  --cr-composebox-expanded-border-radius: 0;
++  --cr-composebox-submit-border-radius: 0;
++  --ntp-module-border-radius: 0;
++  --ntp-module-item-border-radius: 0;
++  font-family: 'DejaVu Sans Mono', 'Courier New', monospace;
++}
++* {
++  border-radius: 0 !important;
++}
++#logo {
++  filter: drop-shadow(0 0 6px #05d9e8)
++          drop-shadow(0 0 18px rgba(5, 217, 232, .45));
++}
++#content {
++  box-shadow: inset 0 0 0 1px rgba(5, 217, 232, .25),
++              inset 0 0 80px rgba(255, 42, 109, .08);
  }
++/* stylelint-enable */
 diff --git a/chrome/browser/resources/new_tab_page/images/goatai_logo.png b/chrome/browser/resources/new_tab_page/images/goatai_logo.png
 new file mode 100644
 index 0000000000000000000000000000000000000000..2776046add9271dcef6c8296561dd94100712d43
@@ -15542,19 +15643,57 @@ index 08742d57aa..6cc90c00fd 100644
  
  :host(:not([single-colored])) #logo {
 diff --git a/chrome/browser/resources/new_tab_page/new_tab_page.html b/chrome/browser/resources/new_tab_page/new_tab_page.html
-index fdc88660c2..ff60ae1bb4 100644
+index fdc88660c2..fcc13b4a6d 100644
 --- a/chrome/browser/resources/new_tab_page/new_tab_page.html
 +++ b/chrome/browser/resources/new_tab_page/new_tab_page.html
-@@ -6,6 +6,9 @@
+@@ -6,6 +6,12 @@
      <style>
        body {
          background: $i18n{backgroundColor};
 +        background-image:
-+            radial-gradient(circle at 18% 0%, rgba(124, 58, 237, .30), transparent 55%),
-+            radial-gradient(circle at 85% 8%, rgba(236, 72, 153, .22), transparent 50%);
++            linear-gradient(rgba(5, 217, 232, .10) 1px, transparent 1px),
++            linear-gradient(90deg, rgba(5, 217, 232, .10) 1px, transparent 1px),
++            linear-gradient(180deg, rgba(255, 42, 109, .18), transparent 60%);
++        background-size: 32px 32px, 32px 32px, 100% 100%;
++        font-family: 'DejaVu Sans Mono', 'Courier New', monospace;
          margin: 0;
        }
  
+diff --git a/chrome/browser/resources/new_tab_page/ntp_searchbox.css b/chrome/browser/resources/new_tab_page/ntp_searchbox.css
+index edec01c683..d8beec6c77 100644
+--- a/chrome/browser/resources/new_tab_page/ntp_searchbox.css
++++ b/chrome/browser/resources/new_tab_page/ntp_searchbox.css
+@@ -403,3 +403,12 @@ cr-searchbox-dropdown::part(dropdown-content) {
+     outline-offset: 2px;
+   }
+ }
++
++/* Goatai vaporwave */
++:host,
++:host([ntp-realbox-next-enabled]) {
++  --cr-searchbox-border-radius: 0 !important;
++  --cr-searchbox-shadow: 0 0 0 2px #05d9e8,
++      0 0 18px rgba(5, 217, 232, .5) !important;
++  font-family: 'DejaVu Sans Mono', 'Courier New', monospace;
++}
+diff --git a/chrome/browser/resources/new_tab_shared/customize_buttons/customize_buttons.css b/chrome/browser/resources/new_tab_shared/customize_buttons/customize_buttons.css
+index ed797462a4..f42db7e2f7 100644
+--- a/chrome/browser/resources/new_tab_shared/customize_buttons/customize_buttons.css
++++ b/chrome/browser/resources/new_tab_shared/customize_buttons/customize_buttons.css
+@@ -46,9 +46,10 @@
+ 
+ .customize-button {
+   --cr-button-height: 32px;
+-  border: none;
+-  border-radius: calc(.5 * var(--cr-button-height));
+-  box-shadow: 0 3px 6px rgba(0, 0, 0, .16), 0 1px 2px rgba(0, 0, 0, .23);
++  border: 1px solid #05d9e8;
++  border-radius: 0;
++  box-shadow: 0 0 10px rgba(5, 217, 232, .45),
++      0 3px 6px rgba(0, 0, 0, .16), 0 1px 2px rgba(0, 0, 0, .23);
+   font-weight: 400;
+   min-width: 32px;
+   padding-inline-end: 16px;
 diff --git a/chrome/browser/resources/settings/appearance_page/appearance_page.html.ts b/chrome/browser/resources/settings/appearance_page/appearance_page.html.ts
 index 8755288ddf..f4bc6e5326 100644
 --- a/chrome/browser/resources/settings/appearance_page/appearance_page.html.ts
@@ -15578,6 +15717,143 @@ index 8755288ddf..f4bc6e5326 100644
              label="$i18n{showVerticalTabsExpandOnHover}">
          </settings-toggle-button>
        ` : ''}
+diff --git a/chrome/browser/resources/webui_toolbar/avatar_button.css b/chrome/browser/resources/webui_toolbar/avatar_button.css
+index 00c5fa7356..d45d96b263 100644
+--- a/chrome/browser/resources/webui_toolbar/avatar_button.css
++++ b/chrome/browser/resources/webui_toolbar/avatar_button.css
+@@ -53,7 +53,7 @@
+ 
+ #icon {
+   --icon-size: var(--toolbar-button-icon-size);
+-  border-radius: 50%;
++  border-radius: 0;
+   display: inline-block;
+   height: var(--icon-size);
+   width: var(--icon-size);
+diff --git a/chrome/browser/resources/webui_toolbar/location_bar.css b/chrome/browser/resources/webui_toolbar/location_bar.css
+index 34cd0aa74b..c955d45405 100644
+--- a/chrome/browser/resources/webui_toolbar/location_bar.css
++++ b/chrome/browser/resources/webui_toolbar/location_bar.css
+@@ -8,7 +8,8 @@
+  * #css_wrapper_metadata_end */
+ 
+ :host {
+-  --border-radius: calc(var(--location-bar-height) / 2);
++  /* Goatai vaporwave: barra de endereço quadrada. */
++  --border-radius: 0;
+   --location-bar-background: var(--color-location-bar-background);
+   --omnibox-start-padding: 0px;
+   align-self: center;
+@@ -18,8 +19,9 @@
+   /* We use outline instead of border or box-shadow.
+    * outline-offset: -1px perfectly mimics the C++ inner 1px bounding box
+    * without affecting child flexbox dimensions. */
+-  outline: 1px solid transparent;
++  outline: 1px solid var(--color-location-bar-border);
+   outline-offset: -1px;
++  box-shadow: 0 0 10px rgba(5, 217, 232, .35);
+   border-radius: var(--border-radius);
+   box-sizing: border-box;
+   display: flex;
+@@ -33,7 +35,7 @@
+    * anyway. We may need to compensate in chip positioning (or change the
+    * approach once they exist
+    */
+-  padding-inline-start: var(--border-radius);
++  padding-inline-start: 8px;
+   padding-inline-end: var(--location-bar-trailing-decoration-edge-padding);
+   transition-property: background-color;
+   transition-duration: 200ms;
+@@ -74,7 +76,7 @@
+   /* The border override for input-in-progress is only visible if
+    * the location bar isn't visibly focused */
+   :host(#location-bar):has(> readonly-omnibox:focus-within) {
+-    outline-color: transparent;
++    outline-color: var(--color-location-bar-border);
+   }
+ }
+ 
+@@ -101,10 +103,10 @@
+ }
+ 
+ :host(#location-bar:not(.no-focus-ring)):has(> readonly-omnibox:focus-within) {
+-  /* Like Native C++ Views, the 2px focus ring bleeds 1px outside the bounds and
+-   * 1px inside (overlapping the 1px background border, HaloInset = -1). */
+-  outline: 2px solid var(--cr-focus-outline-color);
++  /* Goatai: foco também em ciano neon, sem perder a borda quadrada. */
++  outline: 2px solid var(--color-location-bar-border);
+   outline-offset: -1px;
++  box-shadow: 0 0 12px rgba(5, 217, 232, .45);
+ }
+ 
+ @media (forced-colors: active) {
+diff --git a/chrome/browser/resources/webui_toolbar/page_action_icons.css b/chrome/browser/resources/webui_toolbar/page_action_icons.css
+index 9c1ab73264..852d21deef 100644
+--- a/chrome/browser/resources/webui_toolbar/page_action_icons.css
++++ b/chrome/browser/resources/webui_toolbar/page_action_icons.css
+@@ -22,7 +22,7 @@
+   background: var(
+       --color-sys-base-container-elevated,
+       var(--color-toolbar-background-subtle-emphasis));
+-  border-radius: calc(var(--toolbar-chip-height) / 2);
++  border-radius: 0;
+   /* Matches kIconSpacing (2px) in page_action_container_view.cc natively. */
+   gap: 2px;
+   /* Matches kCapsuleInteriorPadding (2px) in page_action_container_view.cc
+diff --git a/chrome/browser/resources/webui_toolbar/pinned_toolbar_action.css b/chrome/browser/resources/webui_toolbar/pinned_toolbar_action.css
+index b88fe68820..e636dbbe09 100644
+--- a/chrome/browser/resources/webui_toolbar/pinned_toolbar_action.css
++++ b/chrome/browser/resources/webui_toolbar/pinned_toolbar_action.css
+@@ -163,7 +163,7 @@ icon-from-table {
+ .badge {
+   align-items: center;
+   background-color: var(--color-toolbar);
+-  border-radius: 50%;
++  border-radius: 0;
+   bottom: 0;
+   box-sizing: border-box;
+   color: var(--color-download-toolbar-button-inactive);
+diff --git a/chrome/browser/resources/webui_toolbar/selected_keyword.css b/chrome/browser/resources/webui_toolbar/selected_keyword.css
+index 26de147950..e5cab9c29b 100644
+--- a/chrome/browser/resources/webui_toolbar/selected_keyword.css
++++ b/chrome/browser/resources/webui_toolbar/selected_keyword.css
+@@ -31,8 +31,7 @@ icon-from-table {
+  */
+ #chip-proper {
+   align-items: center;
+-  border-radius: calc(var(--location-bar-height)/2 -
+-                        var(--location-bar-page-info-icon-vertical-padding));
++  border-radius: 0;
+   display: flex;
+ 
+   overflow: hidden;
+diff --git a/chrome/browser/resources/webui_toolbar/toolbar_action_container.css b/chrome/browser/resources/webui_toolbar/toolbar_action_container.css
+index 91ec249b01..a96f16c031 100644
+--- a/chrome/browser/resources/webui_toolbar/toolbar_action_container.css
++++ b/chrome/browser/resources/webui_toolbar/toolbar_action_container.css
+@@ -43,7 +43,7 @@
+ 
+ :host(webui-toolbar-extensions)::after {
+   border: 1px solid transparent;
+-  border-radius: 9999px;
++  border-radius: 0;
+   box-sizing: border-box;
+   content: '';
+   inset-block: 0;
+diff --git a/chrome/browser/resources/webui_toolbar/toolbar_chip_button.css b/chrome/browser/resources/webui_toolbar/toolbar_chip_button.css
+index 138f08a9ff..d830bd595d 100644
+--- a/chrome/browser/resources/webui_toolbar/toolbar_chip_button.css
++++ b/chrome/browser/resources/webui_toolbar/toolbar_chip_button.css
+@@ -45,8 +45,7 @@
+        var(--location-bar-height, var(--toolbar-chip-height))) / 2, 1px));
+   --toolbar-chip-icon-size: var(--toolbar-button-icon-size);
+   --toolbar-chip-icon-label-gap: 0px;
+-  --toolbar-chip-border-radius: calc(var(--toolbar-chip-height) / 2 -
+-                                     var(--toolbar-chip-paint-inset));
++  --toolbar-chip-border-radius: 0;
+   --toolbar-chip-collapsed-padding-start: 0px;
+   --toolbar-chip-collapsed-padding-end: 0px;
+   --toolbar-chip-padding-start: 0px;
 diff --git a/chrome/browser/ui/color/BUILD.gn b/chrome/browser/ui/color/BUILD.gn
 index 9899d84c43..af7a949f9f 100644
 --- a/chrome/browser/ui/color/BUILD.gn
@@ -15623,10 +15899,10 @@ index 721cb586c2..259731b8e8 100644
    }
 diff --git a/chrome/browser/ui/color/goatai_color_mixer.cc b/chrome/browser/ui/color/goatai_color_mixer.cc
 new file mode 100644
-index 0000000000..5aa4cb013a
+index 0000000000..3c957b1c45
 --- /dev/null
 +++ b/chrome/browser/ui/color/goatai_color_mixer.cc
-@@ -0,0 +1,157 @@
+@@ -0,0 +1,185 @@
 +// Copyright 2026 Goatai. All rights reserved.
 +// Use of this source code is governed by a BSD-style license.
 +
@@ -15649,14 +15925,14 @@ index 0000000000..5aa4cb013a
 +// Paletas tonais da marca. Geradas uma única vez e cacheadas.
 +const ui::Palette& GoataiVioletPalette() {
 +  static base::NoDestructor<std::unique_ptr<ui::Palette>> palette(
-+      ui::GeneratePalette(SkColorSetRGB(0x7C, 0x3A, 0xED),
++      ui::GeneratePalette(SkColorSetRGB(0x05, 0xD9, 0xE8),
 +                          ui::ColorProviderKey::SchemeVariant::kTonalSpot));
 +  return **palette;
 +}
 +
 +const ui::Palette& GoataiPinkPalette() {
 +  static base::NoDestructor<std::unique_ptr<ui::Palette>> palette(
-+      ui::GeneratePalette(SkColorSetRGB(0xEC, 0x48, 0x99),
++      ui::GeneratePalette(SkColorSetRGB(0xFF, 0x2A, 0x6D),
 +                          ui::ColorProviderKey::SchemeVariant::kTonalSpot));
 +  return **palette;
 +}
@@ -15669,83 +15945,111 @@ index 0000000000..5aa4cb013a
 +      key.color_mode == ui::ColorProviderKey::ColorMode::kDark;
 +  ui::ColorMixer& mixer = provider->AddMixer();
 +
-+  // Paleta da marca (Goatai): violeta profundo + magenta.
-+  const SkColor frame =
-+      dark ? SkColorSetRGB(0x16, 0x08, 0x26) : SkColorSetRGB(0x4C, 0x1D, 0x95);
-+  const SkColor frame_inactive =
-+      dark ? SkColorSetRGB(0x1E, 0x0B, 0x33) : SkColorSetRGB(0x43, 0x19, 0x86);
-+  const SkColor toolbar =
-+      dark ? SkColorSetRGB(0x2A, 0x0F, 0x4D) : SkColorSetRGB(0x5B, 0x21, 0xB6);
-+  const SkColor ntp_background =
-+      dark ? SkColorSetRGB(0x16, 0x08, 0x26) : SkColorSetRGB(0xF7, 0xF1, 0xFF);
-+  const SkColor ntp_text =
-+      dark ? SkColorSetRGB(0xF3, 0xE8, 0xFF) : SkColorSetRGB(0x2A, 0x0B, 0x4D);
-+  const SkColor ntp_link =
-+      dark ? SkColorSetRGB(0xFF, 0x7A, 0xB8) : SkColorSetRGB(0xD8, 0x1B, 0x60);
-+  const SkColor ntp_header =
-+      dark ? SkColorSetRGB(0xC4, 0xB5, 0xFD) : SkColorSetRGB(0x6D, 0x28, 0xD9);
-+  const SkColor accent =
-+      dark ? SkColorSetRGB(0xFF, 0x5C, 0xA8) : SkColorSetRGB(0xE9, 0x1E, 0x63);
-+  const SkColor secondary =
-+      dark ? SkColorSetRGB(0xA7, 0x8B, 0xFA) : SkColorSetRGB(0x7C, 0x3A, 0xED);
-+  const SkColor primary_container =
-+      dark ? SkColorSetRGB(0x3B, 0x14, 0x66) : SkColorSetRGB(0xED, 0xE4, 0xFF);
-+  const SkColor on_primary_container =
-+      dark ? SkColorSetRGB(0xF3, 0xE8, 0xFF) : SkColorSetRGB(0x2A, 0x0B, 0x4D);
-+  const SkColor secondary_container =
-+      dark ? SkColorSetRGB(0x2E, 0x10, 0x55) : SkColorSetRGB(0xFC, 0xE7, 0xF2);
++  // Goatai vaporwave: navy profundo, ciano neon e magenta.
++  const SkColor frame = SkColorSetRGB(0x0A, 0x04, 0x20);
++  const SkColor frame_inactive = SkColorSetRGB(0x07, 0x02, 0x18);
++  const SkColor toolbar = SkColorSetRGB(0x14, 0x08, 0x33);
++  const SkColor tab_active = SkColorSetRGB(0x1B, 0x0B, 0x3B);
++  const SkColor ntp_background = SkColorSetRGB(0x0A, 0x04, 0x20);
++  const SkColor ntp_text = SkColorSetRGB(0xE8, 0xF9, 0xFF);
++  const SkColor cyan = SkColorSetRGB(0x05, 0xD9, 0xE8);
++  const SkColor magenta = SkColorSetRGB(0xFF, 0x2A, 0x6D);
++  const SkColor field = SkColorSetRGB(0x12, 0x06, 0x2B);
 +
 +  // Moldura, barra de abas e toolbar.
 +  mixer[ui::kColorFrameActive] = {frame};
 +  mixer[ui::kColorFrameInactive] = {frame_inactive};
 +  mixer[kColorToolbar] = {toolbar};
 +  mixer[kColorToolbarBackgroundSubtleEmphasis] = {toolbar};
-+  mixer[kColorToolbarText] = {SK_ColorWHITE};
-+  mixer[kColorToolbarButtonIcon] = {SK_ColorWHITE};
-+  mixer[kColorToolbarButtonIconDefault] = {SK_ColorWHITE};
++  mixer[kColorToolbarText] = {cyan};
++  mixer[kColorToolbarButtonIcon] = {cyan};
++  mixer[kColorToolbarButtonIconDefault] = {cyan};
 +  mixer[kColorToolbarButtonIconHovered] = {SK_ColorWHITE};
-+  mixer[kColorToolbarButtonIconInactive] =
-+      {SkColorSetA(SK_ColorWHITE, 0xB3)};
++  mixer[kColorToolbarButtonIconInactive] = {SkColorSetA(cyan, 0xB3)};
++  mixer[kColorToolbarTopSeparatorFrameActive] = {cyan};
++  mixer[kColorToolbarTopSeparatorFrameInactive] = {magenta};
++  mixer[kColorToolbarContentAreaSeparator] = {cyan};
 +
 +  // Abas.
-+  mixer[kColorTabBackgroundActiveFrameActive] = {toolbar};
-+  mixer[kColorTabBackgroundActiveFrameInactive] = {toolbar};
++  mixer[kColorTabBackgroundActiveFrameActive] = {tab_active};
++  mixer[kColorTabBackgroundActiveFrameInactive] = {tab_active};
 +  mixer[kColorTabBackgroundInactiveFrameActive] = {frame};
 +  mixer[kColorTabBackgroundInactiveFrameInactive] = {frame_inactive};
-+  mixer[kColorTabForegroundActiveFrameActive] = {SK_ColorWHITE};
-+  mixer[kColorTabForegroundActiveFrameInactive] = {SK_ColorWHITE};
-+  mixer[kColorTabForegroundInactiveFrameActive] =
-+      {SkColorSetA(SK_ColorWHITE, 0xCC)};
-+  mixer[kColorTabForegroundInactiveFrameInactive] =
-+      {SkColorSetA(SK_ColorWHITE, 0x99)};
++  mixer[kColorTabForegroundActiveFrameActive] = {cyan};
++  mixer[kColorTabForegroundActiveFrameInactive] = {cyan};
++  mixer[kColorTabForegroundInactiveFrameActive] = {ntp_text};
++  mixer[kColorTabForegroundInactiveFrameInactive] = {SkColorSetA(ntp_text, 0x99)};
++  mixer[kColorTabStrokeFrameActive] = {cyan};
++  mixer[kColorTabStrokeFrameInactive] = {magenta};
++  mixer[kColorTabDividerFrameActive] = {cyan};
++  mixer[kColorTabDividerFrameInactive] = {magenta};
 +
 +  // Barra de favoritos acompanha a toolbar.
 +  mixer[kColorBookmarkBarBackground] = {toolbar};
-+  mixer[kColorBookmarkBarForeground] = {SK_ColorWHITE};
-+  mixer[kColorBookmarkButtonIcon] = {SK_ColorWHITE};
++  mixer[kColorBookmarkBarForeground] = {cyan};
++  mixer[kColorBookmarkButtonIcon] = {cyan};
 +
 +  // New Tab Page.
 +  mixer[kColorNewTabPageBackground] = {ntp_background};
 +  mixer[kColorNewTabPageText] = {ntp_text};
-+  mixer[kColorNewTabPageLink] = {ntp_link};
-+  mixer[kColorNewTabPageHeader] = {ntp_header};
++  mixer[kColorNewTabPageLink] = {cyan};
++  mixer[kColorNewTabPageHeader] = {magenta};
++  mixer[kColorNewTabPageCommonInputPlaceholder] =
++      {SkColorSetRGB(0x7D, 0xD3, 0xFC)};
 +
-+  // Omnibox (a pílula grande da barra de endereço).
-+  mixer[ui::kColorSysOmniboxContainer] = {primary_container};
-+  mixer[kColorLocationBarBackground] = {primary_container};
-+  mixer[kColorLocationBarBackgroundHovered] = {primary_container};
-+  mixer[kColorLocationBarBorder] = {accent};
++  // Searchbox da NTP.
++  mixer[kColorSearchboxBackground] = {field};
++  mixer[kColorSearchboxBackgroundHovered] = {tab_active};
++  mixer[kColorSearchboxForeground] = {ntp_text};
++  mixer[kColorSearchboxPlaceholder] = {SkColorSetRGB(0x7D, 0xD3, 0xFC)};
++  mixer[kColorSearchboxBorder] = {cyan};
++  mixer[kColorSearchboxResultsBackground] = {field};
++  mixer[kColorSearchboxResultsForeground] = {ntp_text};
++  mixer[kColorSearchboxResultsBackgroundHovered] = {tab_active};
++  mixer[kColorSearchboxResultsFocusIndicator] = {cyan};
 +
-+  // Destaques (foco, botões, seleção, links de WebUI).
-+  mixer[ui::kColorAccent] = {accent};
-+  mixer[ui::kColorSysPrimary] = {accent};
++  // New Tab Page: telhas, chips e composebox em navy neon, sem herdar o
++  // tema de cor do perfil (que deixa as superfícies avermelhadas).
++  mixer[kColorNewTabPageMostVisitedTileBackground] = {field};
++  mixer[kColorNewTabPageMostVisitedForeground] = {ntp_text};
++  mixer[kColorNewTabPageActionChipBackground] = {field};
++  mixer[kColorNewTabPageActionChipBackgroundHover] = {tab_active};
++  mixer[kColorNewTabPageActionChipTextTitle] = {ntp_text};
++  mixer[kColorNewTabPageActionChipTextBody] = {SkColorSetRGB(0x7D, 0xD3, 0xFC)};
++  mixer[kColorNewTabPageActionChipDeepSearchIcon] = {cyan};
++  mixer[kColorNewTabPageComposeboxSubmitButtonBackground] = {magenta};
++
++  // Composebox da NTP (a caixa grande de pesquisa).
++  mixer[kColorComposeboxBackground] = {field};
++  mixer[kColorComposeboxFont] = {ntp_text};
++  mixer[kColorComposeboxFontLight] = {SkColorSetRGB(0x7D, 0xD3, 0xFC)};
++  mixer[kColorComposeboxInputIcon] = {cyan};
++  mixer[kColorComposeboxHover] = {tab_active};
++  mixer[kColorComposeboxGhostCardBackground] = {tab_active};
++  mixer[kColorComposeboxFileChipBackground] = {field};
++  mixer[kColorComposeboxFileChipFaviconBackground] = {tab_active};
++  mixer[kColorComposeboxFileChipText] = {ntp_text};
++  mixer[kColorComposeboxLink] = {cyan};
++  mixer[kColorComposeboxTypeAhead] = {SkColorSetRGB(0x7D, 0xD3, 0xFC)};
++  mixer[kColorComposeboxTypeAheadChip] = {cyan};
++
++  // Omnibox da barra de endereço.
++  mixer[ui::kColorSysOmniboxContainer] = {field};
++  mixer[kColorLocationBarBackground] = {field};
++  mixer[kColorLocationBarBackgroundHovered] = {tab_active};
++  mixer[kColorLocationBarBorder] = {cyan};
++  mixer[kColorOmniboxText] = {ntp_text};
++
++  // Destaques: foco ciano, botões primários magenta.
++  mixer[ui::kColorAccent] = {cyan};
++  mixer[ui::kColorSysPrimary] = {magenta};
 +  mixer[ui::kColorSysOnPrimary] = {SK_ColorWHITE};
-+  mixer[ui::kColorSysPrimaryContainer] = {primary_container};
-+  mixer[ui::kColorSysOnPrimaryContainer] = {on_primary_container};
-+  mixer[ui::kColorSysSecondary] = {secondary};
-+  mixer[ui::kColorSysOnSecondary] = {SK_ColorWHITE};
-+  mixer[ui::kColorSysSecondaryContainer] = {secondary_container};
-+  mixer[ui::kColorSysOnSecondaryContainer] = {on_primary_container};
++  mixer[ui::kColorSysPrimaryContainer] = {tab_active};
++  mixer[ui::kColorSysOnPrimaryContainer] = {ntp_text};
++  mixer[ui::kColorSysSecondary] = {cyan};
++  mixer[ui::kColorSysOnSecondary] = {SK_ColorBLACK};
++  mixer[ui::kColorSysSecondaryContainer] = {SkColorSetRGB(0x2A, 0x0A, 0x3F)};
++  mixer[ui::kColorSysOnSecondaryContainer] = {ntp_text};
 +
 +  // Substitui a paleta Material padrão (azul) pela paleta Goatai. Isso
 +  // recolore todas as superfícies Material que derivam dos ref colors.
@@ -15808,6 +16112,30 @@ index 0000000000..6a0963ae57
 +                         const ui::ColorProviderKey& key);
 +
 +#endif  // CHROME_BROWSER_UI_COLOR_GOATAI_COLOR_MIXER_H_
+diff --git a/chrome/browser/ui/layout_constants.cc b/chrome/browser/ui/layout_constants.cc
+index 01c89d9f34..5eff2afd2a 100644
+--- a/chrome/browser/ui/layout_constants.cc
++++ b/chrome/browser/ui/layout_constants.cc
+@@ -54,7 +54,8 @@ int GetLayoutConstant(LayoutConstant constant) {
+     case LayoutConstant::kLocationBarChildInternalSpacing:
+       return touch_ui ? 10 : 4;
+     case LayoutConstant::kLocationBarChildCornerRadius:
+-      return 12;
++      // Goatai: chips da barra de endereço sem cantos arredondados.
++      return 0;
+     case LayoutConstant::kLocationBarChipIconSize:
+       return 16;
+     case LayoutConstant::kLocationBarChipPadding:
+@@ -162,7 +163,8 @@ int GetLayoutConstant(LayoutConstant constant) {
+     case LayoutConstant::kMainBackgroundRegionCornerRadius:
+     case LayoutConstant::kToolbarCornerRadius:
+     case LayoutConstant::kVerticalTabCornerRadius:
+-      return 8;
++      // Goatai: tema quadrado, sem cantos arredondados.
++      return 0;
+     case LayoutConstant::kVerticalTabHeight:
+       return 30;
+     case LayoutConstant::kVerticalTabPinnedHeight:
 diff --git a/chrome/browser/ui/tabs/tab_menu_model.cc b/chrome/browser/ui/tabs/tab_menu_model.cc
 index 7dcdbcfdbf..70095e070a 100644
 --- a/chrome/browser/ui/tabs/tab_menu_model.cc
@@ -16004,6 +16332,186 @@ index fac2f4211e..0f3f6b0e9c 100644
      "//ui/compositor",
      "//ui/display",
    ]
+diff --git a/chrome/browser/ui/views/frame/goatai_tab_drag_chip.cc b/chrome/browser/ui/views/frame/goatai_tab_drag_chip.cc
+new file mode 100644
+index 0000000000..be627986c4
+--- /dev/null
++++ b/chrome/browser/ui/views/frame/goatai_tab_drag_chip.cc
+@@ -0,0 +1,125 @@
++// Copyright 2026 Goatai. All rights reserved.
++// Use of this source code is governed by a BSD-style license.
++
++#include "chrome/browser/ui/views/frame/goatai_tab_drag_chip.h"
++
++#include "base/no_destructor.h"
++#include "chrome/app/vector_icons/vector_icons.h"
++#include "chrome/browser/ui/views/frame/browser_view.h"
++#include "components/favicon/content/content_favicon_driver.h"
++#include "content/public/browser/web_contents.h"
++#include "ui/base/models/image_model.h"
++#include "ui/color/color_id.h"
++#include "ui/gfx/image/image.h"
++#include "ui/views/background.h"
++#include "ui/views/controls/image_view.h"
++#include "ui/views/layout/box_layout.h"
++#include "ui/views/view_class_properties.h"
++
++namespace {
++
++constexpr int kChipSize = 36;
++constexpr int kChipOffset = 14;
++
++class ChipView : public views::View {
++ public:
++  ChipView() {
++    auto layout = std::make_unique<views::BoxLayout>(
++        views::BoxLayout::Orientation::kVertical, gfx::Insets(8));
++    layout->set_main_axis_alignment(
++        views::BoxLayout::MainAxisAlignment::kCenter);
++    layout->set_cross_axis_alignment(
++        views::BoxLayout::CrossAxisAlignment::kCenter);
++    SetLayoutManager(std::move(layout));
++    SetBackground(views::CreateSolidBackground(
++        SkColorSetARGB(0xE6, 0x20, 0x21, 0x24)));
++    image_ = AddChildView(std::make_unique<views::ImageView>());
++    image_->SetImage(ui::ImageModel::FromVectorIcon(kGlobeIcon, ui::kColorIcon,
++                                                    20));
++  }
++
++  void SetFavicon(const gfx::Image& favicon) {
++    if (!favicon.IsEmpty()) {
++      image_->SetImage(ui::ImageModel::FromImage(favicon));
++    } else {
++      image_->SetImage(
++          ui::ImageModel::FromVectorIcon(kGlobeIcon, ui::kColorIcon, 20));
++    }
++  }
++
++ private:
++  raw_ptr<views::ImageView> image_ = nullptr;
++};
++
++}  // namespace
++
++GoataiTabDragChip* GoataiTabDragChip::Get() {
++  static base::NoDestructor<GoataiTabDragChip> chip;
++  return chip.get();
++}
++
++GoataiTabDragChip::~GoataiTabDragChip() { Hide(); }
++
++void GoataiTabDragChip::Show(views::Widget* parent_widget,
++                             content::WebContents* contents,
++                             const gfx::Point& screen_point) {
++  if (!parent_widget) {
++    return;
++  }
++  BrowserView* browser_view = BrowserView::GetBrowserViewForNativeWindow(
++      parent_widget->GetNativeWindow());
++  if (!browser_view) {
++    return;
++  }
++
++  if (!chip_tracker_.view()) {
++    std::unique_ptr<views::View> chip = std::make_unique<ChipView>();
++    views::View* chip_ptr = browser_view->AddChildView(std::move(chip));
++    chip_tracker_.SetView(chip_ptr);
++    chip_ptr->SetProperty(views::kViewIgnoredByLayoutKey, true);
++    chip_ptr->SetPaintToLayer();
++    chip_ptr->SetVisible(false);
++  }
++
++  const uintptr_t contents_id = reinterpret_cast<uintptr_t>(contents);
++  if (contents_id != contents_id_) {
++    contents_id_ = contents_id;
++    if (auto* chip = static_cast<ChipView*>(chip_tracker_.view())) {
++      if (contents) {
++        if (auto* driver =
++                favicon::ContentFaviconDriver::FromWebContents(contents)) {
++          chip->SetFavicon(driver->GetFavicon());
++        } else {
++          chip->SetFavicon(gfx::Image());
++        }
++      }
++    }
++  }
++
++  MoveTo(screen_point);
++  if (auto* chip = chip_tracker_.view()) {
++    chip->SetVisible(true);
++  }
++}
++
++void GoataiTabDragChip::MoveTo(const gfx::Point& screen_point) {
++  views::View* chip = chip_tracker_.view();
++  if (!chip || !chip->parent()) {
++    return;
++  }
++  gfx::Point local = screen_point;
++  views::View::ConvertPointFromScreen(chip->parent(), &local);
++  chip->SetBounds(local.x() + kChipOffset, local.y() + kChipOffset, kChipSize,
++                  kChipSize);
++}
++
++void GoataiTabDragChip::Hide() {
++  contents_id_ = 0;
++  views::View* chip = chip_tracker_.view();
++  chip_tracker_.SetView(nullptr);
++  if (chip) {
++    if (views::View* parent = chip->parent()) {
++      parent->RemoveChildViewT(chip);
++    }
++  }
++}
+diff --git a/chrome/browser/ui/views/frame/goatai_tab_drag_chip.h b/chrome/browser/ui/views/frame/goatai_tab_drag_chip.h
+new file mode 100644
+index 0000000000..6b74513b42
+--- /dev/null
++++ b/chrome/browser/ui/views/frame/goatai_tab_drag_chip.h
+@@ -0,0 +1,43 @@
++// Copyright 2026 Goatai. All rights reserved.
++// Use of this source code is governed by a BSD-style license.
++
++#ifndef CHROME_BROWSER_UI_VIEWS_FRAME_GOATAI_TAB_DRAG_CHIP_H_
++#define CHROME_BROWSER_UI_VIEWS_FRAME_GOATAI_TAB_DRAG_CHIP_H_
++
++#include <memory>
++
++#include "base/memory/raw_ptr.h"
++#include "ui/views/view_tracker.h"
++
++namespace content {
++class WebContents;
++}
++namespace gfx {
++class Point;
++}
++namespace views {
++class View;
++class Widget;
++}
++
++// Pequeno "chip" com o favicon da aba seguindo o cursor durante o arrasto.
++class GoataiTabDragChip {
++ public:
++  static GoataiTabDragChip* Get();
++
++  void Show(views::Widget* parent_widget,
++            content::WebContents* contents,
++            const gfx::Point& screen_point);
++  void MoveTo(const gfx::Point& screen_point);
++  void Hide();
++
++  GoataiTabDragChip() = default;
++  ~GoataiTabDragChip();
++
++ private:
++
++  views::ViewTracker chip_tracker_;
++  uintptr_t contents_id_ = 0;
++};
++
++#endif  // CHROME_BROWSER_UI_VIEWS_FRAME_GOATAI_TAB_DRAG_CHIP_H_
 diff --git a/chrome/browser/ui/views/frame/system_menu_model_builder.cc b/chrome/browser/ui/views/frame/system_menu_model_builder.cc
 index 581402036f..6111061bb9 100644
 --- a/chrome/browser/ui/views/frame/system_menu_model_builder.cc
@@ -16047,10 +16555,10 @@ index 581402036f..6111061bb9 100644
                                 IDS_VERTICAL_TABS_SEND_FEEDBACK);
 diff --git a/chrome/browser/ui/views/frame/vertical_tab_strip_folder_bar.cc b/chrome/browser/ui/views/frame/vertical_tab_strip_folder_bar.cc
 new file mode 100644
-index 0000000000..5a3f6acbb1
+index 0000000000..1477daedd6
 --- /dev/null
 +++ b/chrome/browser/ui/views/frame/vertical_tab_strip_folder_bar.cc
-@@ -0,0 +1,1350 @@
+@@ -0,0 +1,1349 @@
 +// Copyright 2026 Goatai. All rights reserved.
 +// Use of this source code is governed by a BSD-style license.
 +
@@ -16311,7 +16819,7 @@ index 0000000000..5a3f6acbb1
 +      cc::PaintFlags flags;
 +      flags.setAntiAlias(true);
 +      flags.setColor(SkColorSetA(SK_ColorWHITE, 0x1F));
-+      canvas->DrawRoundRect(GetLocalBounds(), 6, flags);
++      canvas->DrawRect(GetLocalBounds(), flags);
 +    }
 +  }
 +
@@ -16340,9 +16848,8 @@ index 0000000000..5a3f6acbb1
 +        views::BoxLayout::Orientation::kVertical, gfx::Insets(8), 2));
 +
 +    if (anchor->GetColorProvider()) {
-+      contents->SetBackground(views::CreateRoundedRectBackground(
-+          anchor->GetColorProvider()->GetColor(ui::kColorMenuBackground),
-+          10));
++      contents->SetBackground(views::CreateSolidBackground(
++          anchor->GetColorProvider()->GetColor(ui::kColorMenuBackground)));
 +    }
 +
 +    views::Label* title = contents->AddChildView(std::make_unique<views::Label>(
@@ -16662,7 +17169,7 @@ index 0000000000..5a3f6acbb1
 +                                           ui::kColorAccent),
 +                                       0x66)
 +                         : SkColorSetA(SK_ColorWHITE, 0x24));
-+      canvas->DrawRoundRect(bounds, 8, flags);
++      canvas->DrawRect(bounds, flags);
 +    }
 +    PaintContent(canvas, bounds);
 +  }
@@ -17673,6 +18180,34 @@ index b59c975477..fc6f0d38fd 100644
    raw_ptr<VerticalTabStripTopContainer> top_button_container_ = nullptr;
    raw_ptr<views::Separator> top_button_separator_ = nullptr;
    raw_ptr<VerticalTabStripBottomContainer> bottom_button_container_ = nullptr;
+diff --git a/chrome/browser/ui/views/location_bar/icon_label_bubble_view.cc b/chrome/browser/ui/views/location_bar/icon_label_bubble_view.cc
+index 76e80aef31..559877de84 100644
+--- a/chrome/browser/ui/views/location_bar/icon_label_bubble_view.cc
++++ b/chrome/browser/ui/views/location_bar/icon_label_bubble_view.cc
+@@ -602,7 +602,8 @@ gfx::RoundedCornersF IconLabelBubbleView::GetCornerRadii() const {
+   if (radii_.has_value()) {
+     return radii_.value();
+   }
+-  return gfx::RoundedCornersF(GetPreferredSize().height() / 2);
++  // Goatai: chips da barra de endereço quadrados (sem pill).
++  return gfx::RoundedCornersF(0);
+ }
+ 
+ void IconLabelBubbleView::SetCornerRadii(const gfx::RoundedCornersF& radii) {
+diff --git a/chrome/browser/ui/views/location_bar/location_bar_view.cc b/chrome/browser/ui/views/location_bar/location_bar_view.cc
+index 85b2574da8..3ca27a1307 100644
+--- a/chrome/browser/ui/views/location_bar/location_bar_view.cc
++++ b/chrome/browser/ui/views/location_bar/location_bar_view.cc
+@@ -271,7 +271,8 @@ LocationBarView::LocationBarView(BrowserWindowInterface* browser,
+                  !full_popup_completed_first_paint;
+         }));
+     views::FocusRing::Get(this)->SetOutsetFocusRingDisabled(true);
+-    views::InstallPillHighlightPathGenerator(this);
++    // Goatai: foco com anel retangular (sem pill) na barra de endereço.
++    views::InstallRectHighlightPathGenerator(this);
+ 
+ #if BUILDFLAG(OS_LEVEL_GEOLOCATION_PERMISSION_SUPPORTED)
+     if (features::IsOsLevelGeolocationPermissionSupportEnabled()) {
 diff --git a/chrome/browser/ui/views/tabs/dragging/tab_drag_controller.cc b/chrome/browser/ui/views/tabs/dragging/tab_drag_controller.cc
 index 04187c49e6..1b06e7e6ac 100644
 --- a/chrome/browser/ui/views/tabs/dragging/tab_drag_controller.cc
@@ -17807,6 +18342,36 @@ index 04187c49e6..1b06e7e6ac 100644
    CHECK_NE(current_state_, DragState::kNotStarted);
    CHECK(attached_context_);
  
+diff --git a/chrome/browser/ui/views/tabs/shared/tab_strip_flat_edge_button.cc b/chrome/browser/ui/views/tabs/shared/tab_strip_flat_edge_button.cc
+index 62ec2c05ad..2df9a1d731 100644
+--- a/chrome/browser/ui/views/tabs/shared/tab_strip_flat_edge_button.cc
++++ b/chrome/browser/ui/views/tabs/shared/tab_strip_flat_edge_button.cc
+@@ -362,8 +362,9 @@ ui::ColorId TabStripFlatEdgeButton::GetBackgroundColor() const {
+ }
+ 
+ gfx::RoundedCornersF TabStripFlatEdgeButton::GetButtonCornerRadii() const {
+-  constexpr float kFlatRadius = 2.0f;
+-  const float rounded_radius = corner_radius_.value_or(10.0f);
++  // Goatai: botões quadrados (nova aba, busca de abas).
++  constexpr float kFlatRadius = 0.0f;
++  const float rounded_radius = corner_radius_.value_or(0.0f);
+   float flat_radius = kFlatRadius + ((rounded_radius - kFlatRadius) *
+                                      (1.0f - flat_edge_factor_));
+ 
+diff --git a/chrome/browser/ui/views/tabs/tab_strip_control_button.cc b/chrome/browser/ui/views/tabs/tab_strip_control_button.cc
+index 63bf787706..31f13e5ef0 100644
+--- a/chrome/browser/ui/views/tabs/tab_strip_control_button.cc
++++ b/chrome/browser/ui/views/tabs/tab_strip_control_button.cc
+@@ -203,7 +203,8 @@ void TabStripControlButton::UpdateIcon() {
+ }
+ 
+ int TabStripControlButton::GetCornerRadius() const {
+-  return TabStripControlButton::kButtonSize.width() / 2;
++  // Goatai: botões de controle (nova aba, busca de abas) quadrados.
++  return 0;
+ }
+ 
+ int TabStripControlButton::GetFlatCornerRadius() const {
 diff --git a/chrome/installer/linux/common/chromium-browser.info b/chrome/installer/linux/common/chromium-browser.info
 index 694581fc82..d85d25968f 100644
 --- a/chrome/installer/linux/common/chromium-browser.info
@@ -17820,3 +18385,216 @@ index 694581fc82..d85d25968f 100644
  
  # Brief package description.
  SHORTDESC="The web browser from the Chromium projects"
+diff --git a/ui/views/layout/layout_provider.cc b/ui/views/layout/layout_provider.cc
+index d7de554905..e7d090c413 100644
+--- a/ui/views/layout/layout_provider.cc
++++ b/ui/views/layout/layout_provider.cc
+@@ -190,6 +190,8 @@ gfx::Insets LayoutProvider::GetDialogInsetsForContentType(
+ 
+ int LayoutProvider::GetCornerRadiusMetric(Emphasis emphasis,
+                                           const gfx::Size& size) const {
++  // Goatai: tema quadrado, sem cantos arredondados.
++  return 0;
+   switch (emphasis) {
+     case Emphasis::kNone:
+       return 0;
+@@ -245,6 +247,8 @@ int LayoutProvider::GetShadowElevationMetric(Emphasis emphasis) const {
+ 
+ int LayoutProvider::GetCornerRadiusMetric(ShapeSysTokens token,
+                                           const gfx::Size& size) const {
++  // Goatai: tema quadrado, sem cantos arredondados.
++  return 0;
+   switch (token) {
+     case ShapeSysTokens::kXSmall:
+       return 4;
+diff --git a/ui/webui/resources/cr_components/composebox/composebox_aim_button.css b/ui/webui/resources/cr_components/composebox/composebox_aim_button.css
+index 5fc8ada56a..d76cd42648 100644
+--- a/ui/webui/resources/cr_components/composebox/composebox_aim_button.css
++++ b/ui/webui/resources/cr_components/composebox/composebox_aim_button.css
+@@ -153,7 +153,7 @@
+ 
+ #energy {
+   background-color: var(--color-composebox-submit-button-background);
+-  border-radius: 100px;
++  border-radius: 0;
+   forced-color-adjust: none;
+   inset: 0;
+   overflow: hidden;
+diff --git a/ui/webui/resources/cr_components/most_visited/most_visited.css b/ui/webui/resources/cr_components/most_visited/most_visited.css
+index ea6c19b5e9..604a2bfd2b 100644
+--- a/ui/webui/resources/cr_components/most_visited/most_visited.css
++++ b/ui/webui/resources/cr_components/most_visited/most_visited.css
+@@ -129,7 +129,7 @@
+   -webkit-app-region: no-drag;
+   -webkit-tap-highlight-color: transparent;
+   align-items: center;
+-  border-radius: 4px;
++  border-radius: 0;
+   box-sizing: border-box;
+   cursor: pointer;
+   display: flex;
+@@ -147,7 +147,7 @@
+ }
+ 
+ .tile a {
+-  border-radius: 4px;
++  border-radius: 0;
+   display: inline-block;
+   height: 100%;
+   outline: none;
+@@ -258,7 +258,7 @@
+ .tile-icon {
+   align-items: center;
+   background-color: var(--tile-background-color);
+-  border-radius: 50%;
++  border-radius: 0;
+   display: flex;
+   flex-shrink: 0;
+   height: var(--icon-size);
+@@ -275,7 +275,7 @@
+ .managed-tile-icon {
+   align-items: center;
+   background-color: var(--managed-tile-background-color);
+-  border-radius: 50%;
++  border-radius: 0;
+   display: flex;
+   flex-shrink: 0;
+   height: 24px;
+@@ -292,7 +292,7 @@ cr-policy-indicator {
+ 
+ .tile-title {
+   align-items: center;
+-  border-radius: calc(var(--title-height) / 2 + 2px);
++  border-radius: 0;
+   color: var(--most-visited-text-color);
+   display: flex;
+   font-size: var(--most-visited-title-font-size, inherit);
+@@ -436,3 +436,15 @@ cr-toast-manager {
+   --cr-dialog-width: min(380px, calc(100vw - 32px));
+ }
+ </if>
++
++/* stylelint-disable no-duplicate-selectors */
++/* Goatai vaporwave */
++.tile,
++#addShortcut,
++#showMore,
++#showLess {
++  border: 1px solid #05d9e8;
++  border-radius: 0;
++  box-shadow: 0 0 12px rgba(5, 217, 232, .45);
++}
++/* stylelint-enable */
+diff --git a/ui/webui/resources/cr_components/searchbox/searchbox_compose_button.css b/ui/webui/resources/cr_components/searchbox/searchbox_compose_button.css
+index 9c7524921f..17c02bb12b 100644
+--- a/ui/webui/resources/cr_components/searchbox/searchbox_compose_button.css
++++ b/ui/webui/resources/cr_components/searchbox/searchbox_compose_button.css
+@@ -21,7 +21,7 @@
+ }
+ 
+ :host {
+-  --cr-hover-background-color: #F3F5F6;
++  --cr-hover-background-color: var(--color-composebox-background, #12062B);
+   --cr-button-height: 32px;
+   flex-shrink: 0;
+ 
+@@ -34,8 +34,9 @@
+ }
+ 
+ #composeButton {
+-  background-color: #F3F5F6;
+-  color: #1F1F1F;
++  /* Goatai: botão AI Mode quadrado e escuro. */
++  background-color: var(--color-composebox-background, #12062B);
++  color: var(--color-composebox-type-ahead, #7DD3FC);
+   font-weight: 400;
+   font-family: inherit;
+   font-size: inherit;
+@@ -216,7 +217,7 @@
+  */
+ .glow-container {
+   align-items: center;
+-  border-radius: 100px;
++  border-radius: 0;
+   display: flex;
+   height: 36px;
+   margin-inline-end: 8px;
+@@ -246,7 +247,7 @@
+   overflow: hidden;
+   position: absolute;
+   inset: 0;
+-  border-radius: 100px;
++  border-radius: 0;
+   opacity: 0;
+   pointer-events: none;
+   transition: opacity 500ms ease-out;
+@@ -289,7 +290,7 @@
+   translate: 0 -50%;
+   top: 50%;
+   scale: 1.43 0.78;
+-  border-radius: 50%;
++  border-radius: 0;
+   aspect-ratio: 1/1;
+ }
+ 
+@@ -410,7 +411,7 @@
+ :host([energy-effect-animation-enabled]) .input-plate-gradient {
+   position: absolute;
+   inset: 2px 2px;
+-  border-radius: 100px;
++  border-radius: 0;
+   opacity: 0;
+   will-change: opacity, --mask-angle, --gradient-angle;
+   transition: opacity var(--hover-fade-duration) var(--standard-curve);
+@@ -496,7 +497,7 @@
+ :host([energy-effect-animation-enabled]) .gradient {
+   inset: 0;
+   position: absolute;
+-  border-radius: 50%;
++  border-radius: 0;
+   background: var(--glif-gradient);
+   aspect-ratio: 1 / 1;
+   translate: 0 -50%;
+diff --git a/ui/webui/resources/cr_components/searchbox/searchbox_dropdown.css b/ui/webui/resources/cr_components/searchbox/searchbox_dropdown.css
+index 8ea2646507..73d6c34374 100644
+--- a/ui/webui/resources/cr_components/searchbox/searchbox_dropdown.css
++++ b/ui/webui/resources/cr_components/searchbox/searchbox_dropdown.css
+@@ -16,7 +16,7 @@
+ 
+ #content {
+   background-color: var(--color-searchbox-results-background);
+-  border-radius: calc(0.5 * var(--cr-searchbox-height));
++  border-radius: 0;
+   box-shadow: var(--cr-searchbox-shadow);
+   display: flex;
+   gap: 16px;
+diff --git a/ui/webui/resources/cr_elements/cr_shared_vars.css b/ui/webui/resources/cr_elements/cr_shared_vars.css
+index f478ceca5c..cb71dd8894 100644
+--- a/ui/webui/resources/cr_elements/cr_shared_vars.css
++++ b/ui/webui/resources/cr_elements/cr_shared_vars.css
+@@ -377,3 +377,25 @@ html[webui-refresh-2026] {
+     --cr-animations-disabled: 1;
+   }
+ }
++
++/* Goatai: tema retrô quadrado. Zera os raios compartilhados do WebUI. */
++:root {
++  --cr-card-border-radius: 0;
++  --cr-chip-border-radius: 0;
++  --cr-composebox-entrypoint-border-radius: 0;
++  --cr-composebox-expanded-border-radius: 0;
++  --cr-composebox-image-card-border-radius: 0;
++  --cr-composebox-submit-border-radius: 0;
++  --cr-dialog-border-radius: 0;
++  --cr-input-border-radius: 0;
++  --cr-input-underline-border-radius: 0;
++  --cr-menu-border-radius: 0;
++  --cr-searchbox-border-radius: 0;
++  --cr-searchbox-icon-border-radius: 0;
++  --cr-search-field-input-underline-border-radius: 0;
++  --cr-theme-color-border-radius: 0;
++  --cr-toolbar-search-field-border-radius: 0;
++  --cr-tree-row-border-radius: 0;
++  --cr-url-list-item-count-border-radius: 0;
++  --cr-url-list-item-image-container-border-radius: 0;
++}

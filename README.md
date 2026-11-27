@@ -123,3 +123,23 @@ ferramentas/scripts do Chromium. `run.sh` e o atalho `.desktop` usam `goatai`.
 O Chromium não compila de Linux para Windows. Para uma build nativa no
 Windows, siga `docs/BUILD_WINDOWS.md` e use os scripts
 `scripts/windows/bootstrap.ps1` e `scripts/windows/build.ps1`.
+
+## Tema retrô vaporwave
+
+Tema embutido, quadrado e com bordas neon (não depende de extensão):
+
+- Paleta navy profundo (`#0A0420`), ciano neon (`#05D9E8`) e magenta (`#FF2A6D`)
+  em `goatai_color_mixer.cc`.
+- Cantos retos em todo o navegador: `LayoutProvider` zera os raios do Views,
+  `layout_constants.cc` zera abas/toolbar, e o WebUI compartilhado
+  (`cr_shared_vars.css`) zera os raios das páginas internas.
+- Barra de endereço da WebUI (`webui_toolbar/location_bar.css`) quadrada, com
+  borda ciano permanente e glow; chips/botões da toolbar também quadrados.
+- New Tab Page com grade ciano, gradiente magenta, busca escura com borda neon,
+  telhas, chips e "Customize Goatai" quadrados.
+- O tema de cor do perfil é ignorado nas superfícies da NTP (telhas, chips,
+  composebox) para a paleta Goatai sempre valer.
+
+Para voltar ao visual padrão, reverta o patch:
+`git -C src checkout ...` ou reaplique a árvore limpa e rode
+`scripts/apply-branding.sh`.
