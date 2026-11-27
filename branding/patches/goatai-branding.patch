@@ -11038,7 +11038,7 @@ index 880fd51660..1c2912903e 100644
 +}
 +/* stylelint-enable */
 diff --git a/chrome/browser/resources/new_tab_page/app.css b/chrome/browser/resources/new_tab_page/app.css
-index 591b25cc23..303edf97b7 100644
+index 591b25cc23..f811cbf5bd 100644
 --- a/chrome/browser/resources/new_tab_page/app.css
 +++ b/chrome/browser/resources/new_tab_page/app.css
 @@ -308,8 +308,13 @@ svg {
@@ -11057,7 +11057,7 @@ index 591b25cc23..303edf97b7 100644
    --cr-composebox-submit-height: 36px;
    --cr-composebox-submit-icon-size: 24px;
    --cr-composebox-submit-icon-offset: 0;
-@@ -617,4 +622,35 @@ ntp-lens-upload-dialog {
+@@ -617,4 +622,40 @@ ntp-lens-upload-dialog {
  
  :host(:not([show-background-image_])) #rhsContent {
    background-color: var(--color-new-tab-page-background);
@@ -11091,8 +11091,13 @@ index 591b25cc23..303edf97b7 100644
 +#content {
 +  box-shadow: inset 0 0 0 1px rgba(5, 217, 232, .25),
 +              inset 0 0 80px rgba(255, 42, 109, .08);
- }
++}
 +/* stylelint-enable */
++
++/* Goatai: sem botão de customizar na NTP. */
++ntp-customize-buttons {
++  display: none !important;
+ }
 diff --git a/chrome/browser/resources/new_tab_page/images/goatai_logo.png b/chrome/browser/resources/new_tab_page/images/goatai_logo.png
 new file mode 100644
 index 0000000000000000000000000000000000000000..2776046add9271dcef6c8296561dd94100712d43

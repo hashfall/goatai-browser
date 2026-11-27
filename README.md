@@ -1,6 +1,6 @@
 # GoatAI Browser
 
-**Versão atual: v0.5.3** — Chromium 160.0.8187.0
+**Versão atual: v0.5.4** — Chromium 160.0.8187.0
 
 Navegador baseado no Chromium (upstream, sem histórico), com branding Goatai,
 tema retrô vaporwave (cantos retos, bordas neon), abas verticais e
@@ -8,8 +8,12 @@ folders de pins com perfis de cor.
 
 ## Versão
 
-- `VERSION` / tag git `v0.5.3`
+- `VERSION` / tag git `v0.5.4`
 - Commit de referência: o commit imediatamente anterior à tag
+
+### v0.5.4
+
+- Removido o botão "Customize Goatai" da New Tab Page
 
 ### v0.5.3
 
