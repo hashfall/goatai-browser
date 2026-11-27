@@ -77,3 +77,9 @@ submenu de cor e acabava só pintando o folder.
 Clique direito no folder → **Rename...** abre o editor de bookmark padrão
 (`BookmarkEditor::Show` + `EditDetails::EditNode`) com o nome atual; OK aplica
 via `BookmarkModel::SetTitle`.
+
+### Dropdown do folder
+
+Clique esquerdo abre um popup (widget TYPE_POPUP) abaixo do folder com:
+favicon + nome + **X** alinhado à direita para remover o pin. Clicar na linha
+abre o site. Fecha ao perder foco.

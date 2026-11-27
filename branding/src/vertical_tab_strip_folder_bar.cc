@@ -54,9 +54,22 @@
 #include "ui/gfx/image/image_skia.h"
 #include "ui/compositor/layer_tree_owner.h"
 #include "ui/views/accessibility/view_accessibility.h"
+#include "chrome/app/vector_icons/vector_icons.h"
+#include "ui/views/controls/button/image_button.h"
+#include "ui/views/controls/button/label_button.h"
+#include "ui/views/controls/image_view.h"
+#include "ui/views/controls/label.h"
 #include "ui/views/controls/menu/menu_runner.h"
+#include "ui/views/background.h"
+#include "ui/views/border.h"
+#include "ui/views/layout/box_layout.h"
+#include "ui/views/view_class_properties.h"
+#include "ui/views/widget/widget.h"
+#include "ui/views/widget/widget_delegate.h"
+#include "ui/views/widget/widget_observer.h"
 #include "ui/views/controls/menu/menu_types.h"
 #include "ui/views/widget/widget.h"
+#include "ui/views/widget/widget_delegate.h"
 
 namespace {
 
@@ -171,6 +184,175 @@ bool IsDescendant(const BookmarkNode* node, const BookmarkNode* maybe_parent) {
 std::u16string LabelForNode(const BookmarkNode* node) {
   return node->is_folder() ? node->GetTitle() : node->GetTitle();
 }
+
+// Linha de um pin dentro do dropdown do folder.
+class FolderPinRow : public views::View {
+ public:
+  FolderPinRow(VerticalTabStripFolderBar* bar, const BookmarkNode* node)
+      : bar_(bar), node_(node) {
+    SetLayoutManager(std::make_unique<views::BoxLayout>(
+        views::BoxLayout::Orientation::kHorizontal,
+        gfx::Insets::VH(4, 6), 8));
+    SetPreferredSize(gfx::Size(280, 32));
+    SetNotifyEnterExitOnChild(true);
+
+    views::ImageView* icon = AddChildView(std::make_unique<views::ImageView>());
+    const gfx::Image& favicon = bar_->model()->GetFavicon(node_);
+    if (!favicon.IsEmpty()) {
+      icon->SetImage(ui::ImageModel::FromImage(favicon));
+    } else {
+      icon->SetImage(ColorDot(SkColorSetRGB(0x7C, 0x3A, 0xED), false));
+    }
+    icon->SetImageSize(gfx::Size(16, 16));
+
+    views::Label* label = AddChildView(std::make_unique<views::Label>(
+        node_->GetTitle(), views::style::CONTEXT_LABEL,
+        views::style::STYLE_PRIMARY));
+    label->SetElideBehavior(gfx::ELIDE_TAIL);
+    label->SetHorizontalAlignment(gfx::ALIGN_LEFT);
+    if (auto* box = static_cast<views::BoxLayout*>(GetLayoutManager())) {
+      box->SetFlexForView(label, 1);
+    }
+
+    views::LabelButton* remove = AddChildView(
+        std::make_unique<views::LabelButton>(
+            base::BindRepeating(&FolderPinRow::OnRemove, base::Unretained(this)),
+            u"x"));
+    if (bar_->GetColorProvider()) {
+      remove->SetTextColor(
+          views::Button::STATE_NORMAL,
+          bar_->GetColorProvider()->GetColor(ui::kColorMenuIcon));
+    }
+    remove->SetPreferredSize(gfx::Size(24, 24));
+    remove->SetTooltipText(u"Remove pin");
+    remove->SetAccessibleName(u"Remove pin");
+  }
+
+  void OnMouseEntered(const ui::MouseEvent& event) override {
+    hovered_ = true;
+    SchedulePaint();
+  }
+  void OnMouseExited(const ui::MouseEvent& event) override {
+    hovered_ = false;
+    SchedulePaint();
+  }
+  bool OnMousePressed(const ui::MouseEvent& event) override {
+    if (!event.IsOnlyLeftMouseButton()) {
+      return false;
+    }
+    pressed_ = true;
+    return true;
+  }
+  void OnMouseReleased(const ui::MouseEvent& event) override {
+    if (pressed_ && event.IsOnlyLeftMouseButton() &&
+        HitTestPoint(event.location())) {
+      bar_->OpenBookmark(node_);
+      if (GetWidget()) {
+        GetWidget()->Close();
+      }
+    }
+    pressed_ = false;
+  }
+  void OnPaint(gfx::Canvas* canvas) override {
+    if (hovered_) {
+      cc::PaintFlags flags;
+      flags.setAntiAlias(true);
+      flags.setColor(SkColorSetA(SK_ColorWHITE, 0x1F));
+      canvas->DrawRoundRect(GetLocalBounds(), 6, flags);
+    }
+  }
+
+ private:
+  void OnRemove() {
+    bar_->RemovePin(node_);
+    if (GetWidget()) {
+      GetWidget()->Close();
+    }
+  }
+
+  raw_ptr<VerticalTabStripFolderBar> bar_;
+  raw_ptr<const BookmarkNode> node_;
+  bool hovered_ = false;
+  bool pressed_ = false;
+};
+
+// Dropdown ancorado no folder com favicon + nome + X.
+class FolderDropdown : public views::WidgetObserver {
+ public:
+  FolderDropdown(views::View* anchor,
+                 VerticalTabStripFolderBar* bar,
+                 const BookmarkNode* folder) {
+    auto contents = std::make_unique<views::View>();
+    contents->SetLayoutManager(std::make_unique<views::BoxLayout>(
+        views::BoxLayout::Orientation::kVertical, gfx::Insets(8), 2));
+
+    if (anchor->GetColorProvider()) {
+      contents->SetBackground(views::CreateRoundedRectBackground(
+          anchor->GetColorProvider()->GetColor(ui::kColorMenuBackground),
+          10));
+    }
+
+    views::Label* title = contents->AddChildView(std::make_unique<views::Label>(
+        folder->GetTitle(), views::style::CONTEXT_DIALOG_TITLE,
+        views::style::STYLE_PRIMARY));
+    title->SetHorizontalAlignment(gfx::ALIGN_LEFT);
+
+    int rows = 0;
+    for (const auto& child : folder->children()) {
+      if (!child->is_url()) {
+        continue;
+      }
+      std::unique_ptr<views::View> row =
+          std::make_unique<FolderPinRow>(bar, child.get());
+      contents->AddChildView(std::move(row));
+      ++rows;
+    }
+
+    const int height = 16 + 28 + rows * 34;
+    const gfx::Rect anchor_bounds = anchor->GetBoundsInScreen();
+    const gfx::Rect bounds(anchor_bounds.x(), anchor_bounds.bottom() + 6, 240,
+                           height);
+
+    views::Widget::InitParams params(
+        views::Widget::InitParams::CLIENT_OWNS_WIDGET,
+        views::Widget::InitParams::TYPE_POPUP);
+    params.parent = anchor->GetWidget()->GetNativeView();
+    params.bounds = bounds;
+    params.activatable = views::Widget::InitParams::Activatable::kYes;
+    params.shadow_type = views::Widget::InitParams::ShadowType::kDrop;
+    params.name = "GoataiFolderDropdown";
+    widget_ = std::make_unique<views::Widget>();
+    widget_->Init(std::move(params));
+    widget_->SetContentsView(std::move(contents));
+    widget_->AddObserver(this);
+  }
+
+  ~FolderDropdown() override {
+    if (widget_) {
+      widget_->RemoveObserver(this);
+    }
+  }
+
+  void Show() {
+    if (widget_) {
+      widget_->Show();
+    }
+  }
+
+  // views::WidgetObserver:
+  void OnWidgetActivationChanged(views::Widget* widget, bool active) override {
+    if (!active && widget_) {
+      widget_->Close();
+    }
+  }
+  void OnWidgetDestroying(views::Widget* widget) override {
+    base::SequencedTaskRunner::GetCurrentDefault()->DeleteSoon(FROM_HERE,
+                                                               this);
+  }
+
+ private:
+  std::unique_ptr<views::Widget> widget_;
+};
 
 // Ações de um pin solto.
 class PinMenuDelegate : public ui::SimpleMenuModel::Delegate {
@@ -567,7 +749,7 @@ class GoataiFolderTile : public GoataiBaseTile {
   }
 
  protected:
-  void Activate() override { ShowMenu(); }
+  void Activate() override { bar_->ShowFolderDropdown(this, node_); }
 
   void ShowContextMenu(const gfx::Point& point) override {
     node_menu_delegate_ =
@@ -995,6 +1177,16 @@ void VerticalTabStripFolderBar::CreateFolder() {
   }
   model_->AddFolder(root_, root_->children().size(),
                     u"Folder " + base::NumberToString16(number));
+}
+
+void VerticalTabStripFolderBar::ShowFolderDropdown(
+    views::View* anchor,
+    const BookmarkNode* folder) {
+  if (!anchor || !folder || !folder->is_folder()) {
+    return;
+  }
+  auto* dropdown = new FolderDropdown(anchor, this, folder);
+  dropdown->Show();
 }
 
 void VerticalTabStripFolderBar::RenameFolder(views::View* anchor,

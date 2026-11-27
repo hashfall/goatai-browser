@@ -98,6 +98,8 @@ class VerticalTabStripFolderBar : public views::View,
   void PinCurrentPage();
   void PinCurrentPageTo(const bookmarks::BookmarkNode* folder);
   void RemovePin(const bookmarks::BookmarkNode* node);
+  void ShowFolderDropdown(views::View* anchor,
+                          const bookmarks::BookmarkNode* folder);
   void RenameFolder(views::View* anchor,
                     const bookmarks::BookmarkNode* folder);
   void SetFolderColor(
