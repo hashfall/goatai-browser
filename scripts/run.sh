@@ -2,7 +2,7 @@
 # Executa o binário compilado com um perfil separado do Chrome do sistema.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-BIN="$ROOT/src/out/Default/chrome"
+BIN="$ROOT/src/out/Default/goatai"
 # Não herdar app id de outros apps Electron/Chrome.
 unset CHROME_DESKTOP
 "$ROOT/scripts/install-extensions.sh"

@@ -5,7 +5,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DATA="${XDG_DATA_HOME:-$HOME/.local/share}"
 APPS="$DATA/applications"
 ICONS="$DATA/icons/hicolor"
-BIN="$ROOT/src/out/Default/chrome"
+BIN="$ROOT/src/out/Default/goatai"
 PROFILE="$ROOT/.run/profile"
 
 if [ ! -x "$BIN" ]; then

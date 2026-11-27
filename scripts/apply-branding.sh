@@ -544,6 +544,16 @@ if "GoataiTabDragChip::Get()->Hide();" not in t:
                   "  GoataiTabDragChip::Get()->Hide();\n")
 p.write_text(t)
 
+# 7.1) binário principal com o nome goatai
+p = src / "chrome/BUILD.gn"
+t = p.read_text()
+if '_chrome_output_name = "chrome"' in t:
+    t = t.replace(
+        "  } else {\n    _chrome_output_name = \"chrome\"\n  }",
+        "  } else {\n    # Goatai: binário principal com o nome do produto.\n"
+        "    _chrome_output_name = \"goatai\"\n  }")
+    p.write_text(t)
+
 # 8) remove dos menus as opções de horizontal e de desligar auto-expand
 p = src / "chrome/browser/ui/tabs/tab_menu_model.cc"
 t = p.read_text()

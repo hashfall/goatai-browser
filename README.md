@@ -104,3 +104,9 @@ Obs.: o uBlock Origin clássico é MV2 e o Chromium 160 o desabilita
 Instala `~/.local/share/applications/goatai.desktop` (nome **Goatai**, ícone
 `goatai`, perfil `.run/profile`) e os PNGs em
 `~/.local/share/icons/hicolor/*/apps/goatai.png`.
+
+## Binário
+
+O artefato principal é **`src/out/Default/goatai`**. Um symlink
+`src/out/Default/chrome` aponta para ele por compatibilidade com
+ferramentas/scripts do Chromium. `run.sh` e o atalho `.desktop` usam `goatai`.
