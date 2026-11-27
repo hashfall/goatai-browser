@@ -438,16 +438,6 @@ if 'hidden pref-key="vertical_tabs.expand_on_hover"' not in t:
 # 6) arrasto nunca destaca para nova janela; continua na strip atual
 p = src / "chrome/browser/ui/views/tabs/dragging/tab_drag_controller.cc"
 t = p.read_text()
-old = """bool TabDragController::ShouldDragWindowUsingSystemDnD() {
-  return !GetAttachedBrowserWidget()->IsMoveLoopSupported();
-}"""
-new = """bool TabDragController::ShouldDragWindowUsingSystemDnD() {
-  // Goatai: nunca usar DnD de sistema; mantém tudo dentro do navegador.
-  return false;
-}"""
-if old in t:
-    t = t.replace(old, new)
-
 old = """    if (current_drag_target_) {
       TabDragContext* delegate_context =
           current_drag_target_->OnTabDragUpdated(*this, point_in_screen);
