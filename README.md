@@ -1,6 +1,24 @@
 # GoatAI Browser
 
-Navegador baseado no Chromium (upstream, sem histórico).
+**Versão atual: v0.1.0** — Chromium 160.0.8187.0
+
+Navegador baseado no Chromium (upstream, sem histórico), com branding Goatai,
+tema roxo/rosa, abas verticais e folders de pins com perfis de cor.
+
+## Versão
+
+- `VERSION` / tag git `v0.1.0`
+- Commit de referência: o commit imediatamente anterior à tag
+
+### Funcionalidades em v0.1.0
+
+- Branding Goatai (nome, ícones, strings, NTP, atalho `.desktop`)
+- Tema roxo/rosa (toolbar, abas, NTP, Material)
+- Abas verticais sempre ativas com expansão automática no hover
+- Folders de pins na sidebar: cores, rename, remover, dropdown com favicon + X
+- Drag & drop: pin → folder e aba → folder; sem destacar abas para nova janela
+- Extensões padrão: OpenCode Browse, uBlock Origin Lite, Tampermonkey
+- Perfil do projeto em `.run/profile`
 
 ## Estrutura
 
