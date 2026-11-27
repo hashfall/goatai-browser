@@ -97,6 +97,7 @@ class VerticalTabStripFolderBar : public views::View,
   void DeleteFolder(const bookmarks::BookmarkNode* folder);
   void PinCurrentPage();
   void PinCurrentPageTo(const bookmarks::BookmarkNode* folder);
+  void RemovePin(const bookmarks::BookmarkNode* node);
   void SetFolderColor(
       const bookmarks::BookmarkNode* folder,
       std::optional<tab_groups::TabGroupColorId> color);

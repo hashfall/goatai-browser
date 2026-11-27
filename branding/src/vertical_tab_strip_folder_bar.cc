@@ -171,6 +171,48 @@ std::u16string LabelForNode(const BookmarkNode* node) {
   return node->is_folder() ? node->GetTitle() : node->GetTitle();
 }
 
+// Ações de um pin solto.
+class PinMenuDelegate : public ui::SimpleMenuModel::Delegate {
+ public:
+  PinMenuDelegate(VerticalTabStripFolderBar* bar, const BookmarkNode* node)
+      : bar_(bar), node_(node) {}
+
+  void ExecuteCommand(int command_id, int event_flags) override {
+    if (!bar_ || !node_) {
+      return;
+    }
+    if (command_id == 0) {
+      bar_->OpenBookmark(node_);
+    } else if (command_id == 1) {
+      bar_->RemovePin(node_);
+    }
+  }
+
+ private:
+  raw_ptr<VerticalTabStripFolderBar> bar_;
+  raw_ptr<const BookmarkNode> node_;
+};
+
+// Lista de pins para remover de um folder.
+class RemovePinMenuDelegate : public ui::SimpleMenuModel::Delegate {
+ public:
+  RemovePinMenuDelegate(
+      VerticalTabStripFolderBar* bar,
+      std::vector<raw_ptr<const BookmarkNode>> nodes)
+      : bar_(bar), nodes_(std::move(nodes)) {}
+
+  void ExecuteCommand(int command_id, int event_flags) override {
+    if (bar_ && command_id >= 0 &&
+        command_id < static_cast<int>(nodes_.size())) {
+      bar_->RemovePin(nodes_[command_id]);
+    }
+  }
+
+ private:
+  raw_ptr<VerticalTabStripFolderBar> bar_;
+  std::vector<raw_ptr<const BookmarkNode>> nodes_;
+};
+
 // Submenu de cor do folder.
 class FolderColorMenuDelegate : public ui::SimpleMenuModel::Delegate {
  public:
@@ -390,6 +432,21 @@ class GoataiPinTile : public GoataiBaseTile {
  protected:
   void Activate() override { bar_->OpenBookmark(node_); }
 
+  void ShowContextMenu(const gfx::Point& point) override {
+    pin_menu_delegate_ = std::make_unique<PinMenuDelegate>(bar_, node_);
+    pin_menu_ = std::make_unique<ui::SimpleMenuModel>(pin_menu_delegate_.get());
+    pin_menu_->AddItem(0, u"Open");
+    pin_menu_->AddSeparator(ui::NORMAL_SEPARATOR);
+    pin_menu_->AddItem(1, u"Remove pin");
+    pin_menu_runner_ = std::make_unique<views::MenuRunner>(
+        pin_menu_.get(), views::MenuRunner::HAS_MNEMONICS);
+    auto lock = bar_->AcquireKeepExpandedLock();
+    pin_menu_runner_->RunMenuAt(GetWidget(), nullptr,
+                                gfx::Rect(point, gfx::Size()),
+                                views::MenuAnchorPosition::kTopLeft,
+                                ui::mojom::MenuSourceType::kMouse);
+  }
+
   void PaintContent(gfx::Canvas* canvas, const gfx::Rect& content) override {
     const gfx::Image& favicon = bar_->model()->GetFavicon(node_);
     if (!favicon.IsEmpty()) {
@@ -417,6 +474,11 @@ class GoataiPinTile : public GoataiBaseTile {
     canvas->DrawStringRectWithFlags(letter, font, SK_ColorWHITE, content,
                                     gfx::Canvas::TEXT_ALIGN_CENTER);
   }
+
+ private:
+  std::unique_ptr<PinMenuDelegate> pin_menu_delegate_;
+  std::unique_ptr<ui::SimpleMenuModel> pin_menu_;
+  std::unique_ptr<views::MenuRunner> pin_menu_runner_;
 };
 
 class GoataiFolderTile : public GoataiBaseTile {
@@ -517,6 +579,24 @@ class GoataiFolderTile : public GoataiBaseTile {
     }
     menu_model_->AddSubMenu(100, u"Color", color_submenu_.get());
 
+    std::vector<raw_ptr<const BookmarkNode>> pins;
+    for (const auto& child : node_->children()) {
+      if (child->is_url()) {
+        pins.emplace_back(child.get());
+      }
+    }
+    if (!pins.empty()) {
+      remove_menu_delegate_ =
+          std::make_unique<RemovePinMenuDelegate>(bar_, pins);
+      remove_submenu_ = std::make_unique<ui::SimpleMenuModel>(
+          remove_menu_delegate_.get());
+      for (size_t i = 0; i < pins.size(); ++i) {
+        remove_submenu_->AddItem(static_cast<int>(i),
+                                 pins[i]->GetTitle());
+      }
+      menu_model_->AddSubMenu(101, u"Remove pin", remove_submenu_.get());
+    }
+
     menu_model_->AddSeparator(ui::NORMAL_SEPARATOR);
     menu_model_->AddItem(NodeContextMenuDelegate::kDelete, u"Delete folder");
     menu_runner_ = std::make_unique<views::MenuRunner>(
@@ -577,6 +657,8 @@ class GoataiFolderTile : public GoataiBaseTile {
   std::unique_ptr<NodeContextMenuDelegate> node_menu_delegate_;
   std::unique_ptr<FolderColorMenuDelegate> color_menu_delegate_;
   std::unique_ptr<ui::SimpleMenuModel> color_submenu_;
+  std::unique_ptr<RemovePinMenuDelegate> remove_menu_delegate_;
+  std::unique_ptr<ui::SimpleMenuModel> remove_submenu_;
   std::unique_ptr<ui::SimpleMenuModel> menu_model_;
   std::unique_ptr<views::MenuRunner> menu_runner_;
 };
@@ -891,6 +973,15 @@ void VerticalTabStripFolderBar::CreateFolder() {
   }
   model_->AddFolder(root_, root_->children().size(),
                     u"Folder " + base::NumberToString16(number));
+}
+
+void VerticalTabStripFolderBar::RemovePin(const BookmarkNode* node) {
+  if (!model_ || !node || !node->is_url() || node == root_ ||
+      !node->parent()) {
+    return;
+  }
+  model_->Remove(node, bookmarks::metrics::BookmarkEditSource::kUser,
+                 FROM_HERE);
 }
 
 void VerticalTabStripFolderBar::SetFolderColor(

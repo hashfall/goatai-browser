@@ -59,3 +59,9 @@ arquivos.
   paleta dos tab groups, rótulos de `GetTabGroupColorLabelMap`).
 - A cor fica em `BookmarkModel` meta info (`goatai.color`) e tinge o ícone
   do folder. `BookmarkMetaInfoChanged` agenda o rebuild da barra.
+
+### Remover pins
+
+- Pin solto: clique direito no tile → **Remove pin** (ou Open).
+- Pin dentro de folder: menu do folder → submenu **Remove pin** com os pins.
+- Remoção usa `BookmarkModel::Remove`; a barra reconstrói via observer.
