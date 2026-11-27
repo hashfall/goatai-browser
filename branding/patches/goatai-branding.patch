@@ -17874,10 +17874,10 @@ index 0000000000..382813ace6
 +#endif  // CHROME_BROWSER_UI_VIEWS_FRAME_TOOLBAR_AUTO_HIDE_H_
 diff --git a/chrome/browser/ui/views/frame/vertical_tab_strip_folder_bar.cc b/chrome/browser/ui/views/frame/vertical_tab_strip_folder_bar.cc
 new file mode 100644
-index 0000000000..1477daedd6
+index 0000000000..6705b97660
 --- /dev/null
 +++ b/chrome/browser/ui/views/frame/vertical_tab_strip_folder_bar.cc
-@@ -0,0 +1,1349 @@
+@@ -0,0 +1,1411 @@
 +// Copyright 2026 Goatai. All rights reserved.
 +// Use of this source code is governed by a BSD-style license.
 +
@@ -18450,8 +18450,12 @@ index 0000000000..1477daedd6
 +  virtual void SetTabDropHovered(bool hovered) {}
 +
 +  int GetDragOperations(const gfx::Point& press_pt) override {
-+    if (!node_ || node_->is_folder()) {
++    if (!node_) {
 +      return ui::DragDropTypes::DRAG_NONE;
++    }
++    // Goatai: folders também podem ser arrastados, para reordenar.
++    if (node_->is_folder()) {
++      return ui::DragDropTypes::DRAG_MOVE;
 +    }
 +    return ui::DragDropTypes::DRAG_MOVE | ui::DragDropTypes::DRAG_COPY;
 +  }
@@ -18610,15 +18614,30 @@ index 0000000000..1477daedd6
 +    }
 +    VerticalTabStripFolderBar* bar = bar_.get();
 +    const BookmarkNode* target = node_;
++    const BookmarkNode* root = bar_->root_folder();
++    const bool reorder = dragged->is_folder() && root &&
++                         dragged->parent() == root && target->parent() == root;
++    const bool after = event.location().x() > width() / 2;
++    size_t target_index = 0;
++    if (reorder) {
++      target_index = root->GetIndexOf(target).value_or(0);
++    }
 +    return base::BindOnce(
 +        [](VerticalTabStripFolderBar* bar, const BookmarkNode* node,
-+           const BookmarkNode* folder, const ui::DropTargetEvent& event,
-+           ui::mojom::DragOperation& output,
++           const BookmarkNode* folder, const BookmarkNode* root,
++           size_t target_index, bool reorder, bool after,
++           const ui::DropTargetEvent& event, ui::mojom::DragOperation& output,
 +           std::unique_ptr<ui::LayerTreeOwner> layer_owner) {
-+          bar->MoveInto(node, folder);
++          if (reorder) {
++            // Insere antes do folder alvo ou depois, conforme o lado solto.
++            bar->model()->Move(node, root,
++                               target_index + (after ? 1 : 0));
++          } else {
++            bar->MoveInto(node, folder);
++          }
 +          output = ui::mojom::DragOperation::kMove;
 +        },
-+        bar, dragged, target);
++        bar, dragged, target, root, target_index, reorder, after);
 +  }
 +
 +  bool AcceptsTabDrop() const override { return true; }
@@ -18832,28 +18851,71 @@ index 0000000000..1477daedd6
 +  RemoveAllChildViews();
 +  root_ = nullptr;
 +  EnsureRootFolder();
++  bool has_folder = false;
 +  if (root_) {
-+    for (const auto& child : root_->children()) {
-+      if (child->is_folder()) {
-+        std::unique_ptr<views::View> tile =
-+            std::make_unique<GoataiFolderTile>(this, child.get());
-+        AddChildView(std::move(tile));
++    if (collapsed_) {
++      // Na sidebar collapsed, mostra um ícone de folder por linha que os
++      // folders ocupariam com a barra expandida (só o primeiro de cada linha).
++      int folder_count = 0;
++      for (const auto& child : root_->children()) {
++        if (child->is_folder()) {
++          ++folder_count;
++        }
 +      }
-+    }
-+    for (const auto& child : root_->children()) {
-+      if (!child->is_folder()) {
-+        std::unique_ptr<views::View> tile =
-+            std::make_unique<GoataiPinTile>(this, child.get());
-+        AddChildView(std::move(tile));
++      const int bar_width = std::max(kTileSize, uncollapsed_width_ - 24);
++      const int per_row =
++          std::max(1, (bar_width + kGap) / (kTileSize + kGap));
++      const int rows = (folder_count + per_row - 1) / per_row;
++      int shown = 0;
++      int index = 0;
++      for (const auto& child : root_->children()) {
++        if (!child->is_folder()) {
++          continue;
++        }
++        if (index % per_row == 0 && shown < rows) {
++          std::unique_ptr<views::View> tile =
++              std::make_unique<GoataiFolderTile>(this, child.get());
++          AddChildView(std::move(tile));
++          ++shown;
++          has_folder = true;
++        }
++        ++index;
 +      }
++    } else {
++      for (const auto& child : root_->children()) {
++        if (child->is_folder()) {
++          std::unique_ptr<views::View> tile =
++              std::make_unique<GoataiFolderTile>(this, child.get());
++          AddChildView(std::move(tile));
++        }
++      }
++      for (const auto& child : root_->children()) {
++        if (!child->is_folder()) {
++          std::unique_ptr<views::View> tile =
++              std::make_unique<GoataiPinTile>(this, child.get());
++          AddChildView(std::move(tile));
++        }
++      }
++      std::unique_ptr<views::View> new_tile =
++          std::make_unique<GoataiNewFolderTile>(this, root_);
++      AddChildView(std::move(new_tile));
 +    }
-+    std::unique_ptr<views::View> new_tile =
-+        std::make_unique<GoataiNewFolderTile>(this, root_);
-+    AddChildView(std::move(new_tile));
 +  }
 +  rebuilding_ = false;
++  SetVisible(!collapsed_ || has_folder);
 +  InvalidateLayout();
 +  SchedulePaint();
++}
++
++void VerticalTabStripFolderBar::SetCollapsed(bool collapsed,
++                                             int uncollapsed_width) {
++  const bool width_changed = uncollapsed_width_ != uncollapsed_width;
++  uncollapsed_width_ = uncollapsed_width;
++  if (collapsed_ == collapsed && !(collapsed && width_changed)) {
++    return;
++  }
++  collapsed_ = collapsed;
++  Rebuild();
 +}
 +
 +void VerticalTabStripFolderBar::ScheduleRebuild() {
@@ -19229,10 +19291,10 @@ index 0000000000..1477daedd6
 +}
 diff --git a/chrome/browser/ui/views/frame/vertical_tab_strip_folder_bar.h b/chrome/browser/ui/views/frame/vertical_tab_strip_folder_bar.h
 new file mode 100644
-index 0000000000..25d5188bf1
+index 0000000000..2499670681
 --- /dev/null
 +++ b/chrome/browser/ui/views/frame/vertical_tab_strip_folder_bar.h
-@@ -0,0 +1,147 @@
+@@ -0,0 +1,153 @@
 +// Copyright 2026 Goatai. All rights reserved.
 +// Use of this source code is governed by a BSD-style license.
 +
@@ -19342,6 +19404,10 @@ index 0000000000..25d5188bf1
 +      std::optional<tab_groups::TabGroupColorId> color);
 +  void ShowBarContextMenu(views::View* source, const gfx::Point& point);
 +
++  // Quando a sidebar está collapsed, mostra só o primeiro folder (ocupa o
++  // espaço no topo). Sem folders, a barra fica oculta.
++  void SetCollapsed(bool collapsed, int uncollapsed_width);
++
 +  // TabDragTarget: permite arrastar abas para dentro de um folder.
 +  void OnTabDragEntered() override;
 +  TabDragContext* OnTabDragUpdated(TabDragTarget::DragController& controller,
@@ -19376,12 +19442,14 @@ index 0000000000..25d5188bf1
 +  std::unique_ptr<ui::SimpleMenuModel> bar_menu_model_;
 +  std::unique_ptr<views::MenuRunner> bar_menu_runner_;
 +  bool rebuilding_ = false;
++  bool collapsed_ = false;
++  int uncollapsed_width_ = 240;
 +  base::OneShotTimer rebuild_timer_;
 +};
 +
 +#endif  // CHROME_BROWSER_UI_VIEWS_FRAME_VERTICAL_TAB_STRIP_FOLDER_BAR_H_
 diff --git a/chrome/browser/ui/views/frame/vertical_tab_strip_region_view.cc b/chrome/browser/ui/views/frame/vertical_tab_strip_region_view.cc
-index 26693c7a06..df59df0d91 100644
+index 26693c7a06..b67fd24781 100644
 --- a/chrome/browser/ui/views/frame/vertical_tab_strip_region_view.cc
 +++ b/chrome/browser/ui/views/frame/vertical_tab_strip_region_view.cc
 @@ -4,6 +4,10 @@
@@ -19446,9 +19514,9 @@ index 26693c7a06..df59df0d91 100644
    // the collapsing state.
    bool collapsed = state != tabs::VerticalTabStripCollapseState::kExpanded;
  
-+  // Goatai: pins/folders só aparecem com a barra expandida.
++  // Goatai: com a barra collapsed, o folder bar mostra um folder por linha.
 +  if (folder_bar_) {
-+    folder_bar_->SetVisible(!collapsed);
++    folder_bar_->SetCollapsed(collapsed, uncollapsed_width());
 +  }
 +
    resize_area_->SetVisible(ShouldShowResizeArea());

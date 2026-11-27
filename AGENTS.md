@@ -120,6 +120,12 @@ git -C src apply --reverse --check ../branding/patches/goatai-branding.patch
 - Drag: pin/aba → folder; nunca destacar para nova janela. System DnD de aba
   desligado; chip de drag em `goatai_tab_drag_chip.{cc,h}` (usa
   `views::ViewTracker`, não `raw_ptr`).
+- Reordenar folders: arraste um folder sobre outro (lado esquerdo insere
+  antes, direito depois). Implementado em `GoataiFolderTile::GetDropCallback`
+  + `BookmarkModel::Move`.
+- Sidebar collapsed: o folder bar mostra **1 ícone por linha** que os folders
+  ocupariam expandidos (2 rows → 2 ícones, etc.), usando a largura uncollapsed
+  para calcular `per_row`.
 - Correções de crash/drag em `tab_drag_controller.cc`.
 
 ### Auto-hide da toolbar (estilo drawer)
