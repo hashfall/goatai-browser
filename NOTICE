@@ -1,0 +1,16 @@
+Goatai
+Copyright 2026 The Goatai Authors.
+
+Este produto é baseado no Chromium (https://www.chromium.org/),
+Copyright 2015 The Chromium Authors, licenciado sob a BSD 3-Clause
+(veja LICENSE).
+
+O código-fonte do Chromium inclui componentes de terceiros sob suas próprias
+licenças. A lista completa está na árvore do Chromium (src/third_party) e na
+página chrome://credits do navegador.
+
+As adições específicas do Goatai (branding, tema vaporwave, sidebar/folders,
+extensão Goatai IA) são Copyright 2026 The Goatai Authors e também estão sob a
+BSD 3-Clause.
+
+A imagem do bode usada na marca é propriedade do autor do projeto.

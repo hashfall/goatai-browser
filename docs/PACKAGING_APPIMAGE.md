@@ -43,3 +43,10 @@ APPIMAGE_EXTRACT_AND_RUN=1 ./dist/Goatai-0.5.4-x86_64.AppImage
   AppImage bem menor, mas exige recompilar/linkar tudo.
 - O AppImage não instala o navegador como padrão; para isso, use o
   `goatai.desktop` do projeto (`scripts/install-desktop.sh`).
+
+## Distribuição
+
+O AppImage gerado aqui é para uso local. Ele **não** é anexado às releases
+públicas porque o build habilita codecs proprietários (H.264/AAC); distribuir
+esse binário pode ter implicações de patente/licença. Para um pacote público,
+avalie um build com `proprietary_codecs=false` e `ffmpeg_branding="Chromium"`.

@@ -269,4 +269,15 @@ extensão Goatai IA. O perfil fica em `~/.config/goatai/profile` (ou
 `GOATAI_USER_DATA_DIR`). Se não houver FUSE2:
 `APPIMAGE_EXTRACT_AND_RUN=1 ./Goatai-...AppImage`.
 
+> O AppImage **não é distribuído nas releases** deste repositório: o build usa
+> codecs proprietários (H.264/AAC) e distribuir esse binário publicamente pode
+> ter implicações de patente/licença. Gere localmente para uso próprio.
+
 Detalhes: `docs/PACKAGING_APPIMAGE.md`.
+
+## Licença
+
+BSD 3-Clause — veja `LICENSE` e `NOTICE`. O Goatai é baseado no Chromium,
+Copyright 2015 The Chromium Authors, também sob BSD 3-Clause. Componentes de
+terceiros do Chromium mantêm suas próprias licenças (veja `about:credits` no
+navegador e `src/third_party`).

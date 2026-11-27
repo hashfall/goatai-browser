@@ -200,7 +200,8 @@ git -C src apply --reverse --check ../branding/patches/goatai-branding.patch
 - Perfil: `~/.config/goatai/profile` (`GOATAI_USER_DATA_DIR` para outro).
 - `AppRun` passa `--disable-setuid-sandbox` (namespace sandbox).
 - Sem FUSE2: `APPIMAGE_EXTRACT_AND_RUN=1`.
-- Asset anexado à release `v0.5.4`; detalhes em
+- **Não** anexar AppImage às releases públicas: codecs proprietários
+  (H.264/AAC). O pacote é para uso local; detalhes em
   `docs/PACKAGING_APPIMAGE.md`.
 
 ## Windows
