@@ -1,7 +1,7 @@
 // Goatai IA — painel de chat com controle do navegador.
 //
 // Segurança:
-//  - a chave fica só em chrome.storage.session (memória, sem disco);
+//  - a chave fica em chrome.storage.local (no perfil, em disco);
 //  - as requisições partem do processo da extensão, nunca da página visitada;
 //  - nenhuma chave é gravada em log.
 
@@ -77,7 +77,7 @@ function setStatus(text) {
 // ------------------------------------------------------------------ armazen
 
 async function loadKeys() {
-  const stored = await chrome.storage.session.get(KEYS_STORAGE);
+  const stored = await chrome.storage.local.get(KEYS_STORAGE);
   return stored[KEYS_STORAGE] || {};
 }
 
@@ -89,13 +89,13 @@ async function getKey(provider) {
 async function saveKey(provider, key) {
   const keys = await loadKeys();
   keys[provider] = key;
-  await chrome.storage.session.set({[KEYS_STORAGE]: keys});
+  await chrome.storage.local.set({[KEYS_STORAGE]: keys});
 }
 
 async function removeKey(provider) {
   const keys = await loadKeys();
   delete keys[provider];
-  await chrome.storage.session.set({[KEYS_STORAGE]: keys});
+  await chrome.storage.local.set({[KEYS_STORAGE]: keys});
 }
 
 async function loadSettings() {
@@ -128,8 +128,8 @@ function maskKey(key) {
 async function refreshKeyState() {
   const key = await getKey(state.provider);
   $('keyState').textContent = key ?
-      `Chave salva (memória): ${maskKey(key)}` :
-      'Nenhuma chave nesta sessão.';
+      `Chave salva (disco): ${maskKey(key)}` :
+      'Nenhuma chave salva.';
   $('settings').hidden = !!key;
 }
 

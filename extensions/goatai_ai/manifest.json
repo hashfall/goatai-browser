@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Goatai IA",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Assistente de IA do Goatai com controle do navegador.",
   "permissions": [
     "storage",

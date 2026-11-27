@@ -1,6 +1,6 @@
 # GoatAI Browser
 
-**Versão atual: v0.4.0** — Chromium 160.0.8187.0
+**Versão atual: v0.5.0** — Chromium 160.0.8187.0
 
 Navegador baseado no Chromium (upstream, sem histórico), com branding Goatai,
 tema retrô vaporwave (cantos retos, bordas neon), abas verticais e
@@ -8,8 +8,15 @@ folders de pins com perfis de cor.
 
 ## Versão
 
-- `VERSION` / tag git `v0.4.0`
+- `VERSION` / tag git `v0.5.0`
 - Commit de referência: o commit imediatamente anterior à tag
+
+### v0.5.0
+
+- Toolbar desliza suavemente para fora/para dentro do topo (200 ms)
+- Chave de API da IA agora fica salva no perfil (`chrome.storage.local`),
+  persistindo entre reinícios
+- Página fica por baixo da barra durante a animação (sem "salto" de layout)
 
 ### v0.4.0
 
@@ -24,7 +31,7 @@ folders de pins com perfis de cor.
 
 - Painel lateral direito **Goatai IA** com botão de toggle na toolbar
 - Provedores: GPT (OpenAI), Gemini, DeepSeek e Claude (modelo editável)
-- Chave de API só em memória (`chrome.storage.session`), sem disco/logs
+- Chave de API salva no perfil (`chrome.storage.local`), sem logs
 - A IA pode controlar o navegador: abrir/alternar/fechar abas, navegar,
   ler a página, clicar, digitar e rolar (toggle de permissão no painel)
 - Painel é um side panel nativo que hospeda a página da extensão
@@ -186,9 +193,9 @@ O ícone de chat com sparkle na toolbar abre o painel lateral direito.
 
 - **Provedores**: GPT, Gemini, DeepSeek e Claude. O nome do modelo é editável
   para acompanhar atualizações dos provedores.
-- **Chave de API**: guardada apenas na memória da extensão
-  (`chrome.storage.session`); não vai para o disco, para o perfil nem para
-  logs, e desaparece quando o navegador fecha.
+- **Chave de API**: guardada no perfil em `chrome.storage.local` (disco),
+  então permanece entre reinícios. Não vai para páginas visitadas nem para
+  logs. A segurança depende do acesso ao seu usuário no sistema.
 - **Controle do navegador**: com "Permitir que a IA controle o navegador"
   ligado, ela pode abrir/alternar/fechar abas, navegar, ler o texto da página,
   clicar por seletor ou texto, digitar e rolar. Desligue o toggle para usar
@@ -199,8 +206,8 @@ O ícone de chat com sparkle na toolbar abre o painel lateral direito.
 
 ## Toolbar com auto-hide
 
-A barra superior se esconde sozinha quando você está usando a página e o mouse
-não está sobre ela. Para trazê-la de volta:
+A barra superior desliza para fora do topo quando você está usando a página e o
+mouse não está sobre ela (animação de 200 ms). Para trazê-la de volta:
 
 - encoste o mouse na borda superior da janela (faixa de 4px);
 - use Ctrl+L / Ctrl+K / Ctrl+E / Ctrl+T, Alt+D ou F6.

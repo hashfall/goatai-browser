@@ -17059,7 +17059,7 @@ index fac2f4211e..30499f76cd 100644
    deps = [
      ":app_menu_button",
 diff --git a/chrome/browser/ui/views/frame/browser_view.cc b/chrome/browser/ui/views/frame/browser_view.cc
-index ee0ace7939..3f80ccaaab 100644
+index ee0ace7939..80fd66c910 100644
 --- a/chrome/browser/ui/views/frame/browser_view.cc
 +++ b/chrome/browser/ui/views/frame/browser_view.cc
 @@ -3,6 +3,7 @@
@@ -17070,7 +17070,29 @@ index ee0ace7939..3f80ccaaab 100644
  
  #include <stdint.h>
  
-@@ -2957,7 +2958,7 @@ bool BrowserView::IsToolbarVisible() const {
+@@ -2937,6 +2938,21 @@ void BrowserView::DisableTabStripEditingForTesting() {
+   tab_strip_view()->DisableTabStripEditingForTesting();  // IN-TEST
+ }
+ 
++void BrowserView::SetToolbarAutoHideHeight(std::optional<int> height) {
++  if (toolbar_auto_hide_height_ == height) {
++    return;
++  }
++  toolbar_auto_hide_height_ = height;
++  InvalidateLayout();
++}
++
++int BrowserView::GetToolbarHeightForLayout() const {
++  if (toolbar_auto_hide_height_.has_value()) {
++    return *toolbar_auto_hide_height_;
++  }
++  return toolbar_ ? toolbar_->GetPreferredSize().height() : 0;
++}
++
+ bool BrowserView::IsToolbarVisible() const {
+ #if BUILDFLAG(IS_MAC)
+   // Immersive full screen makes it possible to display the toolbar when
+@@ -2957,7 +2973,7 @@ bool BrowserView::IsToolbarVisible() const {
                WindowFeatureController::WindowFeature::kFeatureToolbar) ||
            WindowFeatureController::From(browser_)->SupportsWindowFeature(
                WindowFeatureController::WindowFeature::kFeatureLocationBar)) &&
@@ -17079,7 +17101,7 @@ index ee0ace7939..3f80ccaaab 100644
  }
  
  bool BrowserView::IsToolbarShowing() const {
-@@ -4938,6 +4939,11 @@ void BrowserView::AddedToWidget() {
+@@ -4938,6 +4954,11 @@ void BrowserView::AddedToWidget() {
  
    toolbar_->Init();
  
@@ -17092,7 +17114,7 @@ index ee0ace7939..3f80ccaaab 100644
  
  #if BUILDFLAG(IS_CHROMEOS)
 diff --git a/chrome/browser/ui/views/frame/browser_view.h b/chrome/browser/ui/views/frame/browser_view.h
-index 47a569a3f0..aba0c41cf5 100644
+index 47a569a3f0..4242630bca 100644
 --- a/chrome/browser/ui/views/frame/browser_view.h
 +++ b/chrome/browser/ui/views/frame/browser_view.h
 @@ -97,6 +97,7 @@ class TabSearchBubbleHost;
@@ -17103,12 +17125,26 @@ index 47a569a3f0..aba0c41cf5 100644
  class ToolbarView;
  class TopContainerView;
  class TopControlsSlideController;
-@@ -1177,6 +1178,9 @@ class BrowserView : public BrowserWindow,
+@@ -295,6 +296,10 @@ class BrowserView : public BrowserWindow,
+   const ToolbarView* toolbar() const { return toolbar_; }
+   ToolbarView* toolbar() { return toolbar_; }
+ 
++  // Altura temporária da toolbar durante o auto-hide (std::nullopt = natural).
++  void SetToolbarAutoHideHeight(std::optional<int> height);
++  int GetToolbarHeightForLayout() const;
++
+   // Bookmark bar may be null, for example for pop-ups.
+   BookmarkBarView* bookmark_bar() { return bookmark_bar_view_; }
+ 
+@@ -1177,6 +1182,12 @@ class BrowserView : public BrowserWindow,
    // The Toolbar containing the navigation buttons, menus and the address bar.
    raw_ptr<ToolbarView> toolbar_ = nullptr;
  
 +  // Esconde/mostra a toolbar automaticamente (estilo Zen).
 +  std::unique_ptr<ToolbarAutoHideController> toolbar_auto_hide_;
++
++  // Altura animada da toolbar enquanto o auto-hide está em transição.
++  std::optional<int> toolbar_auto_hide_height_;
 +
    // The OverlayView for the widget, which is used to host `top_container_`
    // during immersive reveal.
@@ -17293,6 +17329,65 @@ index 0000000000..6b74513b42
 +};
 +
 +#endif  // CHROME_BROWSER_UI_VIEWS_FRAME_GOATAI_TAB_DRAG_CHIP_H_
+diff --git a/chrome/browser/ui/views/frame/layout/browser_view_layout_delegate.h b/chrome/browser/ui/views/frame/layout/browser_view_layout_delegate.h
+index 2d92bee805..333f056ab1 100644
+--- a/chrome/browser/ui/views/frame/layout/browser_view_layout_delegate.h
++++ b/chrome/browser/ui/views/frame/layout/browser_view_layout_delegate.h
+@@ -47,6 +47,7 @@ class BrowserViewLayoutDelegate {
+   virtual WindowState GetBrowserWindowState() const = 0;
+   virtual views::LayoutAlignment GetWindowTitleAlignment() const = 0;
+   virtual bool IsToolbarVisible() const = 0;
++  virtual int GetToolbarHeight() const = 0;
+   virtual bool IsBookmarkBarVisible() const = 0;
+   virtual bool IsInfobarVisible() const = 0;
+   virtual bool IsContentsSeparatorEnabled() const = 0;
+diff --git a/chrome/browser/ui/views/frame/layout/browser_view_layout_delegate_impl.cc b/chrome/browser/ui/views/frame/layout/browser_view_layout_delegate_impl.cc
+index 6c5e35a1db..1a9848ef70 100644
+--- a/chrome/browser/ui/views/frame/layout/browser_view_layout_delegate_impl.cc
++++ b/chrome/browser/ui/views/frame/layout/browser_view_layout_delegate_impl.cc
+@@ -149,6 +149,10 @@ bool BrowserViewLayoutDelegateImpl::IsToolbarVisible() const {
+   return browser_view_->IsToolbarVisible();
+ }
+ 
++int BrowserViewLayoutDelegateImpl::GetToolbarHeight() const {
++  return browser_view_->GetToolbarHeightForLayout();
++}
++
+ bool BrowserViewLayoutDelegateImpl::IsBookmarkBarVisible() const {
+   return browser_view_->IsBookmarkBarVisible();
+ }
+diff --git a/chrome/browser/ui/views/frame/layout/browser_view_layout_delegate_impl.h b/chrome/browser/ui/views/frame/layout/browser_view_layout_delegate_impl.h
+index 801ef978b2..91d64263d1 100644
+--- a/chrome/browser/ui/views/frame/layout/browser_view_layout_delegate_impl.h
++++ b/chrome/browser/ui/views/frame/layout/browser_view_layout_delegate_impl.h
+@@ -31,6 +31,7 @@ class BrowserViewLayoutDelegateImpl : public BrowserViewLayoutDelegate {
+   WindowState GetBrowserWindowState() const override;
+   views::LayoutAlignment GetWindowTitleAlignment() const override;
+   bool IsToolbarVisible() const override;
++  int GetToolbarHeight() const override;
+   bool IsBookmarkBarVisible() const override;
+   bool IsInfobarVisible() const override;
+   bool IsContentsSeparatorEnabled() const override;
+diff --git a/chrome/browser/ui/views/frame/layout/browser_view_tabbed_layout_impl.cc b/chrome/browser/ui/views/frame/layout/browser_view_tabbed_layout_impl.cc
+index 52df491e8c..0ac708c1f1 100644
+--- a/chrome/browser/ui/views/frame/layout/browser_view_tabbed_layout_impl.cc
++++ b/chrome/browser/ui/views/frame/layout/browser_view_tabbed_layout_impl.cc
+@@ -1458,13 +1458,13 @@ gfx::Rect BrowserViewTabbedLayoutImpl::CalculateTopContainerLayout(
+   if (IsParentedTo(views().toolbar, views().top_container)) {
+     gfx::Rect toolbar_bounds;
+     if (toolbar_visible) {
++      const int toolbar_height = delegate().GetToolbarHeight();
+       toolbar_bounds =
+           needs_exclusion
+               ? GetBoundsWithExclusion(params, views().toolbar)
+               : gfx::Rect(params.visual_client_area.x(),
+                           params.visual_client_area.y(),
+-                          params.visual_client_area.width(),
+-                          views().toolbar->GetPreferredSize().height());
++                          params.visual_client_area.width(), toolbar_height);
+       params.SetTop(toolbar_bounds.bottom());
+       needs_exclusion = false;
+     }
 diff --git a/chrome/browser/ui/views/frame/system_menu_model_builder.cc b/chrome/browser/ui/views/frame/system_menu_model_builder.cc
 index 581402036f..6111061bb9 100644
 --- a/chrome/browser/ui/views/frame/system_menu_model_builder.cc
@@ -17336,23 +17431,27 @@ index 581402036f..6111061bb9 100644
                                 IDS_VERTICAL_TABS_SEND_FEEDBACK);
 diff --git a/chrome/browser/ui/views/frame/toolbar_auto_hide.cc b/chrome/browser/ui/views/frame/toolbar_auto_hide.cc
 new file mode 100644
-index 0000000000..fb8052cdc4
+index 0000000000..c639035a89
 --- /dev/null
 +++ b/chrome/browser/ui/views/frame/toolbar_auto_hide.cc
-@@ -0,0 +1,203 @@
+@@ -0,0 +1,319 @@
 +// Copyright 2026 Goatai. All rights reserved.
 +// Use of this source code is governed by a BSD-style license.
 +
 +#include "chrome/browser/ui/views/frame/toolbar_auto_hide.h"
++
++#include <cmath>
++#include <optional>
 +
 +#include "base/functional/bind.h"
 +#include "base/time/time.h"
 +#include "chrome/browser/ui/views/frame/browser_view.h"
 +#include "chrome/browser/ui/views/frame/top_container_view.h"
 +#include "chrome/browser/ui/views/toolbar/toolbar_view.h"
++#include "ui/compositor/layer.h"
 +#include "ui/events/event.h"
-+#include "ui/events/keycodes/keyboard_codes.h"
 +#include "ui/events/event_observer.h"
++#include "ui/events/keycodes/keyboard_codes.h"
 +#include "ui/events/types/event_type.h"
 +#include "ui/gfx/geometry/point.h"
 +#include "ui/gfx/geometry/rect.h"
@@ -17366,6 +17465,7 @@ index 0000000000..fb8052cdc4
 +// Faixa no topo da janela que revela a toolbar quando o mouse encosta.
 +constexpr int kRevealHeight = 4;
 +constexpr base::TimeDelta kHideDelay = base::Milliseconds(250);
++constexpr base::TimeDelta kAnimationDuration = base::Milliseconds(500);
 +
 +}  // namespace
 +
@@ -17392,6 +17492,7 @@ index 0000000000..fb8052cdc4
 +
 +ToolbarAutoHideController::~ToolbarAutoHideController() {
 +  hide_timer_.Stop();
++  animation_.Stop();
 +  if (focus_manager_) {
 +    focus_manager_->RemoveFocusChangeListener(this);
 +  }
@@ -17449,14 +17550,126 @@ index 0000000000..fb8052cdc4
 +  return false;
 +}
 +
++void ToolbarAutoHideController::EnsureLayer() {
++  if (!toolbar_->layer()) {
++    toolbar_->SetPaintToLayer();
++    created_layer_ = true;
++  }
++  if (toolbar_->layer()) {
++    toolbar_->layer()->SetFillsBoundsOpaquely(false);
++  }
++}
++
 +void ToolbarAutoHideController::ShowToolbar() {
-+  views::View* top = browser_view_->top_container();
-+  if (ShouldSuspend() || !top || top->GetVisible()) {
++  if (ShouldSuspend()) {
 +    return;
 +  }
-+  toolbar_->SetVisible(true);
++  views::View* top = browser_view_->top_container();
++  if (!top) {
++    return;
++  }
++  if (state_ == State::kShowing) {
++    return;
++  }
++
++  if (state_ == State::kHiding) {
++    top->SetVisible(true);
++    toolbar_->SetVisible(true);
++    EnsureLayer();
++    state_ = State::kShowing;
++    animation_.Reset(animation_.GetCurrentValue());
++    animation_.Show();
++    return;
++  }
++
++  if (top->GetVisible() && toolbar_->GetVisible()) {
++    return;
++  }
++
++  full_height_ = toolbar_->GetPreferredSize().height();
++  if (full_height_ <= 0) {
++    return;
++  }
++
++  state_ = State::kShowing;
 +  top->SetVisible(true);
-+  top->InvalidateLayout();
++  toolbar_->SetVisible(true);
++  EnsureLayer();
++  if (toolbar_->layer()) {
++    toolbar_->layer()->SetOpacity(0.0f);
++  }
++  browser_view_->SetToolbarAutoHideHeight(0);
++  animation_.SetSlideDuration(kAnimationDuration);
++  animation_.Reset(0.0);
++  animation_.Show();
++}
++
++void ToolbarAutoHideController::HideToolbar() {
++  if (ShouldSuspend()) {
++    return;
++  }
++  if (state_ == State::kHiding || !toolbar_->GetVisible()) {
++    return;
++  }
++
++  if (state_ == State::kShowing) {
++    state_ = State::kHiding;
++    animation_.Reset(animation_.GetCurrentValue());
++    animation_.Hide();
++    return;
++  }
++
++  const int current_height =
++      toolbar_->height() > 0 ? toolbar_->height()
++                             : toolbar_->GetPreferredSize().height();
++  if (current_height <= 0) {
++    return;
++  }
++  full_height_ = current_height;
++  state_ = State::kHiding;
++  EnsureLayer();
++  animation_.SetSlideDuration(kAnimationDuration);
++  animation_.Reset(1.0);
++  animation_.Hide();
++}
++
++void ToolbarAutoHideController::FinishAnimation() {
++  const bool hidden = state_ == State::kHiding;
++  browser_view_->SetToolbarAutoHideHeight(std::nullopt);
++  if (hidden) {
++    toolbar_->SetVisible(false);
++    if (views::View* top = browser_view_->top_container()) {
++      top->SetVisible(false);
++    }
++  }
++  if (toolbar_->layer()) {
++    toolbar_->layer()->SetOpacity(1.0f);
++  }
++  if (created_layer_) {
++    toolbar_->DestroyLayer();
++    created_layer_ = false;
++  }
++  state_ = State::kIdle;
++}
++
++void ToolbarAutoHideController::AnimationProgressed(
++    const gfx::Animation* animation) {
++  const double value = animation_.GetCurrentValue();
++  const int height = static_cast<int>(std::lround(full_height_ * value));
++  browser_view_->SetToolbarAutoHideHeight(height);
++  if (toolbar_->layer()) {
++    toolbar_->layer()->SetOpacity(static_cast<float>(value));
++  }
++}
++
++void ToolbarAutoHideController::AnimationEnded(
++    const gfx::Animation* animation) {
++  FinishAnimation();
++}
++
++void ToolbarAutoHideController::AnimationCanceled(
++    const gfx::Animation* animation) {
++  FinishAnimation();
 +}
 +
 +void ToolbarAutoHideController::ScheduleHide() {
@@ -17470,8 +17683,7 @@ index 0000000000..fb8052cdc4
 +}
 +
 +void ToolbarAutoHideController::HideToolbarIfAllowed() {
-+  views::View* top = browser_view_->top_container();
-+  if (ShouldSuspend() || !top || !top->GetVisible()) {
++  if (ShouldSuspend() || !toolbar_->GetVisible()) {
 +    return;
 +  }
 +  // Só esconde quando o conteúdo (a página) está em foco e o mouse saiu da
@@ -17479,15 +17691,14 @@ index 0000000000..fb8052cdc4
 +  if (!ContentsHasFocus() || MouseOverToolbar() || FocusInToolbar()) {
 +    return;
 +  }
-+  toolbar_->SetVisible(false);
-+  top->SetVisible(false);
-+  top->InvalidateLayout();
++  HideToolbar();
 +}
 +
 +void ToolbarAutoHideController::OnEvent(const ui::Event& event) {
 +  if (ShouldSuspend()) {
 +    return;
 +  }
++
 +  if (event.type() == ui::EventType::kKeyPressed) {
 +    // Atalhos que focam a barra (omnibox) precisam mostrá-la antes.
 +    const ui::KeyEvent* key = event.AsKeyEvent();
@@ -17545,10 +17756,10 @@ index 0000000000..fb8052cdc4
 +}
 diff --git a/chrome/browser/ui/views/frame/toolbar_auto_hide.h b/chrome/browser/ui/views/frame/toolbar_auto_hide.h
 new file mode 100644
-index 0000000000..4568abf023
+index 0000000000..382813ace6
 --- /dev/null
 +++ b/chrome/browser/ui/views/frame/toolbar_auto_hide.h
-@@ -0,0 +1,59 @@
+@@ -0,0 +1,77 @@
 +// Copyright 2026 Goatai. All rights reserved.
 +// Use of this source code is governed by a BSD-style license.
 +
@@ -17560,6 +17771,8 @@ index 0000000000..4568abf023
 +#include "base/memory/raw_ptr.h"
 +#include "base/timer/timer.h"
 +#include "ui/events/event_observer.h"
++#include "ui/gfx/animation/animation_delegate.h"
++#include "ui/gfx/animation/slide_animation.h"
 +#include "ui/views/focus/focus_manager.h"
 +
 +class BrowserView;
@@ -17573,7 +17786,8 @@ index 0000000000..4568abf023
 +// ela, e mostra de novo ao encostar o mouse no topo da janela, ao focar a
 +// omnibox ou ao abrir menus/bolhas da toolbar (o conteúdo deixa de ter foco).
 +class ToolbarAutoHideController : public ui::EventObserver,
-+                                  public views::FocusChangeListener {
++                                  public views::FocusChangeListener,
++                                  public gfx::AnimationDelegate {
 + public:
 +  ToolbarAutoHideController(BrowserView* browser_view, ToolbarView* toolbar);
 +  ToolbarAutoHideController(const ToolbarAutoHideController&) = delete;
@@ -17590,21 +17804,36 @@ index 0000000000..4568abf023
 +  void OnDidChangeFocus(views::View* focused_before,
 +                        views::View* focused_now) override;
 +
++  // gfx::AnimationDelegate:
++  void AnimationProgressed(const gfx::Animation* animation) override;
++  void AnimationEnded(const gfx::Animation* animation) override;
++  void AnimationCanceled(const gfx::Animation* animation) override;
++
 + private:
++  enum class State { kIdle, kShowing, kHiding };
++
 +  bool MouseOverToolbar() const;
 +  bool FocusInToolbar() const;
 +  bool ContentsHasFocus() const;
 +  bool ShouldSuspend() const;
 +
 +  void ShowToolbar();
++  void HideToolbar();
 +  void ScheduleHide();
 +  void HideToolbarIfAllowed();
++  void EnsureLayer();
++  void FinishAnimation();
 +
 +  raw_ptr<BrowserView> browser_view_;
 +  raw_ptr<ToolbarView> toolbar_;
 +  raw_ptr<views::FocusManager> focus_manager_ = nullptr;
 +  std::unique_ptr<views::EventMonitor> event_monitor_;
 +  base::OneShotTimer hide_timer_;
++
++  gfx::SlideAnimation animation_{this};
++  int full_height_ = 0;
++  bool created_layer_ = false;
++  State state_ = State::kIdle;
 +};
 +
 +#endif  // CHROME_BROWSER_UI_VIEWS_FRAME_TOOLBAR_AUTO_HIDE_H_

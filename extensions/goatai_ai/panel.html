@@ -45,9 +45,10 @@
       <span>Permitir que a IA controle o navegador</span>
     </label>
     <p class="hint warn">
-      A chave fica apenas na memória da extensão (chrome.storage.session):
-      não vai para o disco e some quando o navegador fecha. As requisições
-      saem do processo da extensão, nunca da página que você visita.
+      A chave fica salva no perfil (chrome.storage.local) e permanece entre
+      reinícios. Ela não é enviada para as páginas visitadas nem para logs; as
+      requisições saem do processo da extensão. Proteja o acesso ao seu usuário
+      no sistema.
     </p>
   </section>
 
