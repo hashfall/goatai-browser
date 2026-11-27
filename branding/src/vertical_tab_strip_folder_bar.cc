@@ -43,7 +43,10 @@
 #include "ui/menus/simple_menu_model.h"
 #include "ui/color/color_id.h"
 #include "ui/color/color_provider.h"
+#include "ui/base/models/image_model.h"
 #include "ui/gfx/canvas.h"
+#include "ui/gfx/color_palette.h"
+#include "ui/gfx/image/canvas_image_source.h"
 #include "ui/gfx/font_list.h"
 #include "ui/gfx/geometry/rounded_corners_f.h"
 #include "ui/gfx/image/image.h"
@@ -80,6 +83,41 @@ constexpr GoataiFolderColor kFolderColors[] = {
     {tab_groups::TabGroupColorId::kCyan, "cyan", gfx::kGoogleCyan600},
     {tab_groups::TabGroupColorId::kOrange, "orange", gfx::kGoogleOrange600},
 };
+
+class ColorDotSource : public gfx::CanvasImageSource {
+ public:
+  ColorDotSource(SkColor color, bool selected)
+      : gfx::CanvasImageSource(gfx::Size(16, 16)),
+        color_(color),
+        selected_(selected) {}
+
+  void Draw(gfx::Canvas* canvas) override {
+    cc::PaintFlags fill;
+    fill.setAntiAlias(true);
+    fill.setColor(color_);
+    canvas->DrawCircle(gfx::PointF(8.0f, 8.0f), 7.0f, fill);
+    if (selected_) {
+      cc::PaintFlags stroke;
+      stroke.setAntiAlias(true);
+      stroke.setStyle(cc::PaintFlags::kStroke_Style);
+      stroke.setStrokeWidth(1.6f);
+      stroke.setColor(SK_ColorWHITE);
+      canvas->DrawLine(gfx::PointF(4.5f, 8.0f), gfx::PointF(7.0f, 10.5f),
+                       stroke);
+      canvas->DrawLine(gfx::PointF(7.0f, 10.5f), gfx::PointF(11.5f, 5.5f),
+                       stroke);
+    }
+  }
+
+ private:
+  SkColor color_;
+  bool selected_;
+};
+
+ui::ImageModel ColorDot(SkColor color, bool selected) {
+  return ui::ImageModel::FromImageSkia(
+      gfx::CanvasImageSource::MakeImageSkia<ColorDotSource>(color, selected));
+}
 
 const char* KeyForFolderColor(tab_groups::TabGroupColorId id) {
   for (const auto& entry : kFolderColors) {
@@ -465,13 +503,17 @@ class GoataiFolderTile : public GoataiBaseTile {
         bar_, node_, SelectedColorCommand(node_));
     color_submenu_ = std::make_unique<ui::SimpleMenuModel>(
         color_menu_delegate_.get());
-    color_submenu_->AddRadioItem(0, u"Default", 0);
+    const int selected = SelectedColorCommand(node_);
+    color_submenu_->AddItemWithIcon(
+        0, u"Default",
+        ColorDot(gfx::kGoogleGrey500, selected == 0));
     const auto& labels = tab_groups::GetTabGroupColorLabelMap();
     for (const auto& entry : kFolderColors) {
+      const int command = static_cast<int>(entry.id) + 1;
       const auto it = labels.find(entry.id);
-      color_submenu_->AddRadioItem(
-          static_cast<int>(entry.id) + 1,
-          it != labels.end() ? it->second : std::u16string(), 0);
+      color_submenu_->AddItemWithIcon(
+          command, it != labels.end() ? it->second : std::u16string(),
+          ColorDot(entry.color, selected == command));
     }
     menu_model_->AddSubMenu(100, u"Color", color_submenu_.get());
 
