@@ -17640,7 +17640,7 @@ index b59c975477..fc6f0d38fd 100644
    raw_ptr<views::Separator> top_button_separator_ = nullptr;
    raw_ptr<VerticalTabStripBottomContainer> bottom_button_container_ = nullptr;
 diff --git a/chrome/browser/ui/views/tabs/dragging/tab_drag_controller.cc b/chrome/browser/ui/views/tabs/dragging/tab_drag_controller.cc
-index 04187c49e6..0e76a551b8 100644
+index 04187c49e6..1b06e7e6ac 100644
 --- a/chrome/browser/ui/views/tabs/dragging/tab_drag_controller.cc
 +++ b/chrome/browser/ui/views/tabs/dragging/tab_drag_controller.cc
 @@ -2,6 +2,7 @@
@@ -17659,7 +17659,41 @@ index 04187c49e6..0e76a551b8 100644
    if (g_tab_drag_controller == this) {
      g_tab_drag_controller = nullptr;
    }
-@@ -1096,6 +1098,17 @@ TabDragController::Liveness TabDragController::ContinueDragging(
+@@ -836,25 +838,14 @@ TabDragController::Liveness TabDragController::Drag(
+         model->GetFocusedGroup().has_value() &&
+         drag_data_.group_header_id() == model->GetFocusedGroup();
+ 
+-    if (is_dragging_all_tabs || is_dragging_focused_group_header) {
+-      if (ShouldDragWindowUsingSystemDnD()) {
+-        return StartSystemDnDSessionIfNecessary(attached_context_,
+-                                                point_in_screen);
+-      }
+-
+-      did_restore_window_ =
+-          was_source_maximized_ ||
+-          (was_source_fullscreen_ && CanRestoreFullscreenWindowDuringDrag());
+-      if (did_restore_window_) {
+-        RestoreAttachedWindowForDrag();
+-      }
+-
+-      // Drag the window relative to `start_point_in_screen_` to pretend that
+-      // this was the plan all along.
+-      const gfx::Vector2d drag_offset =
+-          start_point_in_screen_ -
+-          attached_context_->GetWidget()->GetWindowBoundsInScreen().origin();
+-      return RunMoveLoop(point_in_screen, drag_offset);
++    // Goatai: com o DnD de sistema desligado, não movemos a janela ao arrastar
++    // todas as abas (ou a única aba). Segue como drag normal de aba, para que
++    // o drop em folders funcione. Sem este guard, o RunMoveLoop abaixo saía
++    // antes de iniciar kDraggingTabs e o drag "não fazia nada" no Wayland.
++    if ((is_dragging_all_tabs || is_dragging_focused_group_header) &&
++        ShouldDragWindowUsingSystemDnD()) {
++      return StartSystemDnDSessionIfNecessary(attached_context_,
++                                              point_in_screen);
+     }
+ 
+     current_state_ = DragState::kDraggingTabs;
+@@ -1096,6 +1087,17 @@ TabDragController::Liveness TabDragController::ContinueDragging(
    }
    last_point_in_screen_ = point_in_screen;
  
@@ -17677,7 +17711,7 @@ index 04187c49e6..0e76a551b8 100644
    CHECK(attached_context_, base::NotFatalUntil::M162);
  
    TabDragContext* target_context = source_context_;
-@@ -1116,6 +1129,11 @@ TabDragController::Liveness TabDragController::ContinueDragging(
+@@ -1116,6 +1118,11 @@ TabDragController::Liveness TabDragController::ContinueDragging(
      }
    }
  
@@ -17689,7 +17723,7 @@ index 04187c49e6..0e76a551b8 100644
    if (target_context != attached_context_) {
      is_dragging_new_browser_ = false;
      did_restore_window_ = false;
-@@ -1282,7 +1300,9 @@ TabDragController::Liveness TabDragController::DragBrowserToNewTabStrip(
+@@ -1282,7 +1289,9 @@ TabDragController::Liveness TabDragController::DragBrowserToNewTabStrip(
  }
  
  bool TabDragController::ShouldDragWindowUsingSystemDnD() {
@@ -17700,7 +17734,7 @@ index 04187c49e6..0e76a551b8 100644
  }
  
  void TabDragController::RequestTabThumbnail() {
-@@ -1457,6 +1477,11 @@ TabDragController::GetDragTargetForPoint(gfx::Point point_in_screen) {
+@@ -1457,6 +1466,11 @@ TabDragController::GetDragTargetForPoint(gfx::Point point_in_screen) {
    const Liveness state = GetLocalProcessWindow(
        point_in_screen, current_state_ == DragState::kDraggingWindow,
        &local_window);
@@ -17712,7 +17746,7 @@ index 04187c49e6..0e76a551b8 100644
    if (state == Liveness::kDeleted) {
      return std::tuple(Liveness::kDeleted, nullptr, nullptr);
    }
-@@ -1467,7 +1492,9 @@ TabDragController::GetDragTargetForPoint(gfx::Point point_in_screen) {
+@@ -1467,7 +1481,9 @@ TabDragController::GetDragTargetForPoint(gfx::Point point_in_screen) {
      TabDragContext* destination_tab_strip =
          browser_view->tab_strip_view()->GetDragContext();
      if (destination_tab_strip) {
@@ -17723,7 +17757,7 @@ index 04187c49e6..0e76a551b8 100644
          return std::tuple(Liveness::kAlive, destination_tab_strip, nullptr);
        } else if (TabDragTarget* candidate =
                       GetTabDragPointResolver()->GetDragTarget(
-@@ -2227,6 +2254,7 @@ void TabDragController::EndDragImpl(EndDragType type) {
+@@ -2227,6 +2243,7 @@ void TabDragController::EndDragImpl(EndDragType type) {
  }
  
  void TabDragController::RevertDrag() {
@@ -17731,7 +17765,7 @@ index 04187c49e6..0e76a551b8 100644
    CHECK(attached_context_);
    CHECK(source_context_);
  
-@@ -2589,6 +2617,7 @@ void TabDragController::RevertSplitAt(size_t drag_index) {
+@@ -2589,6 +2606,7 @@ void TabDragController::RevertSplitAt(size_t drag_index) {
  }
  
  void TabDragController::CompleteDrag() {

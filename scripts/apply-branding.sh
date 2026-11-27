@@ -449,6 +449,40 @@ new = """bool TabDragController::ShouldDragWindowUsingSystemDnD() {
 if old in t:
     t = t.replace(old, new)
 
+old_all = """    if (is_dragging_all_tabs || is_dragging_focused_group_header) {
+      if (ShouldDragWindowUsingSystemDnD()) {
+        return StartSystemDnDSessionIfNecessary(attached_context_,
+                                                point_in_screen);
+      }
+
+      did_restore_window_ =
+          was_source_maximized_ ||
+          (was_source_fullscreen_ && CanRestoreFullscreenWindowDuringDrag());
+      if (did_restore_window_) {
+        RestoreAttachedWindowForDrag();
+      }
+
+      // Drag the window relative to `start_point_in_screen_` to pretend that
+      // this was the plan all along.
+      const gfx::Vector2d drag_offset =
+          start_point_in_screen_ -
+          attached_context_->GetWidget()->GetWindowBoundsInScreen().origin();
+      return RunMoveLoop(point_in_screen, drag_offset);
+    }
+"""
+new_all = """    // Goatai: com o DnD de sistema desligado, não movemos a janela ao arrastar
+    // todas as abas (ou a única aba). Segue como drag normal de aba, para que
+    // o drop em folders funcione. Sem este guard, o RunMoveLoop abaixo saía
+    // antes de iniciar kDraggingTabs e o drag "não fazia nada" no Wayland.
+    if ((is_dragging_all_tabs || is_dragging_focused_group_header) &&
+        ShouldDragWindowUsingSystemDnD()) {
+      return StartSystemDnDSessionIfNecessary(attached_context_,
+                                              point_in_screen);
+    }
+"""
+if old_all in t:
+    t = t.replace(old_all, new_all)
+
 old = """    if (current_drag_target_) {
       TabDragContext* delegate_context =
           current_drag_target_->OnTabDragUpdated(*this, point_in_screen);

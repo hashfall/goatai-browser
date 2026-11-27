@@ -103,3 +103,10 @@ de `RemoveChildViewT` (dangling raw_ptr → SIGTRAP). Agora usa
 arrastar a única aba (ou todas) entrava no system DnD e destacava uma janela.
 O clamp em `ContinueDragging` mantém o drag na strip. "Move to new window"
 continua no menu de contexto da aba.
+
+### Drag com uma única aba
+
+O ramo `is_dragging_all_tabs` chamava `RunMoveLoop` mesmo com o DnD de sistema
+desligado, retornando antes de `kDraggingTabs` — por isso arrastar a única aba
+não fazia nada no Wayland. O ramo agora só roda quando
+`ShouldDragWindowUsingSystemDnD()` é true; caso contrário vira drag normal.
