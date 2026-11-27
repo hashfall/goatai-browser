@@ -1,6 +1,6 @@
 # GoatAI Browser
 
-**Versão atual: v0.3.0** — Chromium 160.0.8187.0
+**Versão atual: v0.4.0** — Chromium 160.0.8187.0
 
 Navegador baseado no Chromium (upstream, sem histórico), com branding Goatai,
 tema retrô vaporwave (cantos retos, bordas neon), abas verticais e
@@ -8,8 +8,17 @@ folders de pins com perfis de cor.
 
 ## Versão
 
-- `VERSION` / tag git `v0.3.0`
+- `VERSION` / tag git `v0.4.0`
 - Commit de referência: o commit imediatamente anterior à tag
+
+### v0.4.0
+
+- Toolbar com auto-hide estilo Zen: some quando a página está em foco e o
+  mouse não está sobre ela
+- Aparece ao encostar o mouse no topo (faixa de 4px), ao focar a omnibox e em
+  atalhos como Ctrl+L/K/E/T, Alt+D e F6
+- Fica visível enquanto menus, bolhas ou a própria barra estiverem em foco
+- Desativado em fullscreen (o modo imersivo cuida da barra)
 
 ### v0.3.0
 
@@ -187,3 +196,15 @@ O ícone de chat com sparkle na toolbar abre o painel lateral direito.
 - A extensão fica em `extensions/goatai_ai` e é carregada pelo `goatai`
   (`--load-extension`). O painel nativo apenas hospeda essa página; as
   requisições saem do processo da extensão.
+
+## Toolbar com auto-hide
+
+A barra superior se esconde sozinha quando você está usando a página e o mouse
+não está sobre ela. Para trazê-la de volta:
+
+- encoste o mouse na borda superior da janela (faixa de 4px);
+- use Ctrl+L / Ctrl+K / Ctrl+E / Ctrl+T, Alt+D ou F6.
+
+Ela permanece visível enquanto a omnibox ou qualquer menu/bolha da barra
+estiverem abertos, e também enquanto o mouse estiver sobre ela. Em fullscreen
+o auto-hide é desligado (o modo imersivo do Chromium assume).
