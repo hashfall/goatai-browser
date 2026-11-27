@@ -71,3 +71,9 @@ arquivos.
 Menus com submenus (`Color`, `Remove pin`) usam IDs 2000+/3000+ e o menu do
 folder 1000+. Antes, `Delete folder` (id 2) colidia com `Blue` (id 2) do
 submenu de cor e acabava só pintando o folder.
+
+### Renomear folder
+
+Clique direito no folder → **Rename...** abre o editor de bookmark padrão
+(`BookmarkEditor::Show` + `EditDetails::EditNode`) com o nome atual; OK aplica
+via `BookmarkModel::SetTitle`.

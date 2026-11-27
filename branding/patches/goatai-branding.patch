@@ -16005,10 +16005,10 @@ index 581402036f..6111061bb9 100644
                                 IDS_VERTICAL_TABS_SEND_FEEDBACK);
 diff --git a/chrome/browser/ui/views/frame/vertical_tab_strip_folder_bar.cc b/chrome/browser/ui/views/frame/vertical_tab_strip_folder_bar.cc
 new file mode 100644
-index 0000000000..e1e9a18bab
+index 0000000000..a23c8d7c84
 --- /dev/null
 +++ b/chrome/browser/ui/views/frame/vertical_tab_strip_folder_bar.cc
-@@ -0,0 +1,1131 @@
+@@ -0,0 +1,1158 @@
 +// Copyright 2026 Goatai. All rights reserved.
 +// Use of this source code is governed by a BSD-style license.
 +
@@ -16033,6 +16033,7 @@ index 0000000000..e1e9a18bab
 +#include "base/strings/utf_string_conversions.h"
 +#include "base/task/sequenced_task_runner.h"
 +#include "chrome/browser/bookmarks/bookmark_model_factory.h"
++#include "chrome/browser/ui/bookmarks/bookmark_editor.h"
 +#include "chrome/browser/profiles/profile.h"
 +#include "chrome/browser/ui/browser_window/public/browser_window_interface.h"
 +#include "chrome/browser/ui/color/chrome_color_id.h"
@@ -16306,10 +16307,16 @@ index 0000000000..e1e9a18bab
 +class NodeContextMenuDelegate : public ui::SimpleMenuModel::Delegate {
 + public:
 +  NodeContextMenuDelegate(VerticalTabStripFolderBar* bar,
-+                          const BookmarkNode* node)
-+      : bar_(bar), node_(node) {}
++                          const BookmarkNode* node,
++                          views::View* anchor)
++      : bar_(bar), node_(node), anchor_(anchor) {}
 +  // IDs únicos (evita colisão com os submenus de cor/pins).
-+  enum Command { kOpenAll = 1000, kPinHere = 1001, kDelete = 1002 };
++  enum Command {
++    kOpenAll = 1000,
++    kPinHere = 1001,
++    kRename = 1002,
++    kDelete = 1003,
++  };
 +  void ExecuteCommand(int command_id, int event_flags) override {
 +    if (!bar_ || !node_) {
 +      return;
@@ -16321,6 +16328,9 @@ index 0000000000..e1e9a18bab
 +      case kPinHere:
 +        bar_->PinCurrentPageTo(node_);
 +        break;
++      case kRename:
++        bar_->RenameFolder(anchor_, node_);
++        break;
 +      case kDelete:
 +        bar_->DeleteFolder(node_);
 +        break;
@@ -16330,6 +16340,7 @@ index 0000000000..e1e9a18bab
 + private:
 +  raw_ptr<VerticalTabStripFolderBar> bar_;
 +  raw_ptr<const BookmarkNode> node_;
++  raw_ptr<views::View> anchor_;
 +};
 +
 +}  // namespace
@@ -16570,11 +16581,13 @@ index 0000000000..e1e9a18bab
 +  void Activate() override { ShowMenu(); }
 +
 +  void ShowContextMenu(const gfx::Point& point) override {
-+    node_menu_delegate_ = std::make_unique<NodeContextMenuDelegate>(bar_, node_);
++    node_menu_delegate_ =
++        std::make_unique<NodeContextMenuDelegate>(bar_, node_, this);
 +    menu_model_ = std::make_unique<ui::SimpleMenuModel>(node_menu_delegate_.get());
 +    menu_model_->AddItem(NodeContextMenuDelegate::kOpenAll, u"Open all");
 +    menu_model_->AddItem(NodeContextMenuDelegate::kPinHere,
 +                         u"Pin current tab here");
++    menu_model_->AddItem(NodeContextMenuDelegate::kRename, u"Rename...");
 +
 +    const int selected_index = SelectedColorCommand(node_);
 +    const int selected_command =
@@ -16995,6 +17008,20 @@ index 0000000000..e1e9a18bab
 +                    u"Folder " + base::NumberToString16(number));
 +}
 +
++void VerticalTabStripFolderBar::RenameFolder(views::View* anchor,
++                                             const BookmarkNode* folder) {
++  if (!folder || !folder->is_folder() || !profile_) {
++    return;
++  }
++  gfx::NativeWindow parent = nullptr;
++  if (anchor && anchor->GetWidget()) {
++    parent = anchor->GetWidget()->GetNativeWindow();
++  }
++  BookmarkEditor::Show(parent, profile_,
++                       BookmarkEditor::EditDetails::EditNode(folder),
++                       BookmarkEditor::NO_TREE);
++}
++
 +void VerticalTabStripFolderBar::RemovePin(const BookmarkNode* node) {
 +  if (!model_ || !node || !node->is_url() || node == root_ ||
 +      !node->parent()) {
@@ -17142,10 +17169,10 @@ index 0000000000..e1e9a18bab
 +}
 diff --git a/chrome/browser/ui/views/frame/vertical_tab_strip_folder_bar.h b/chrome/browser/ui/views/frame/vertical_tab_strip_folder_bar.h
 new file mode 100644
-index 0000000000..3a88b9ba05
+index 0000000000..93b2eb4eb4
 --- /dev/null
 +++ b/chrome/browser/ui/views/frame/vertical_tab_strip_folder_bar.h
-@@ -0,0 +1,143 @@
+@@ -0,0 +1,145 @@
 +// Copyright 2026 Goatai. All rights reserved.
 +// Use of this source code is governed by a BSD-style license.
 +
@@ -17246,6 +17273,8 @@ index 0000000000..3a88b9ba05
 +  void PinCurrentPage();
 +  void PinCurrentPageTo(const bookmarks::BookmarkNode* folder);
 +  void RemovePin(const bookmarks::BookmarkNode* node);
++  void RenameFolder(views::View* anchor,
++                    const bookmarks::BookmarkNode* folder);
 +  void SetFolderColor(
 +      const bookmarks::BookmarkNode* folder,
 +      std::optional<tab_groups::TabGroupColorId> color);

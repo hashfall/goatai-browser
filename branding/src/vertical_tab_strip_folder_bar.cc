@@ -22,6 +22,7 @@
 #include "base/strings/utf_string_conversions.h"
 #include "base/task/sequenced_task_runner.h"
 #include "chrome/browser/bookmarks/bookmark_model_factory.h"
+#include "chrome/browser/ui/bookmarks/bookmark_editor.h"
 #include "chrome/browser/profiles/profile.h"
 #include "chrome/browser/ui/browser_window/public/browser_window_interface.h"
 #include "chrome/browser/ui/color/chrome_color_id.h"
@@ -295,10 +296,16 @@ class BarMenuDelegate : public ui::SimpleMenuModel::Delegate {
 class NodeContextMenuDelegate : public ui::SimpleMenuModel::Delegate {
  public:
   NodeContextMenuDelegate(VerticalTabStripFolderBar* bar,
-                          const BookmarkNode* node)
-      : bar_(bar), node_(node) {}
+                          const BookmarkNode* node,
+                          views::View* anchor)
+      : bar_(bar), node_(node), anchor_(anchor) {}
   // IDs únicos (evita colisão com os submenus de cor/pins).
-  enum Command { kOpenAll = 1000, kPinHere = 1001, kDelete = 1002 };
+  enum Command {
+    kOpenAll = 1000,
+    kPinHere = 1001,
+    kRename = 1002,
+    kDelete = 1003,
+  };
   void ExecuteCommand(int command_id, int event_flags) override {
     if (!bar_ || !node_) {
       return;
@@ -310,6 +317,9 @@ class NodeContextMenuDelegate : public ui::SimpleMenuModel::Delegate {
       case kPinHere:
         bar_->PinCurrentPageTo(node_);
         break;
+      case kRename:
+        bar_->RenameFolder(anchor_, node_);
+        break;
       case kDelete:
         bar_->DeleteFolder(node_);
         break;
@@ -319,6 +329,7 @@ class NodeContextMenuDelegate : public ui::SimpleMenuModel::Delegate {
  private:
   raw_ptr<VerticalTabStripFolderBar> bar_;
   raw_ptr<const BookmarkNode> node_;
+  raw_ptr<views::View> anchor_;
 };
 
 }  // namespace
@@ -559,11 +570,13 @@ class GoataiFolderTile : public GoataiBaseTile {
   void Activate() override { ShowMenu(); }
 
   void ShowContextMenu(const gfx::Point& point) override {
-    node_menu_delegate_ = std::make_unique<NodeContextMenuDelegate>(bar_, node_);
+    node_menu_delegate_ =
+        std::make_unique<NodeContextMenuDelegate>(bar_, node_, this);
     menu_model_ = std::make_unique<ui::SimpleMenuModel>(node_menu_delegate_.get());
     menu_model_->AddItem(NodeContextMenuDelegate::kOpenAll, u"Open all");
     menu_model_->AddItem(NodeContextMenuDelegate::kPinHere,
                          u"Pin current tab here");
+    menu_model_->AddItem(NodeContextMenuDelegate::kRename, u"Rename...");
 
     const int selected_index = SelectedColorCommand(node_);
     const int selected_command =
@@ -982,6 +995,20 @@ void VerticalTabStripFolderBar::CreateFolder() {
   }
   model_->AddFolder(root_, root_->children().size(),
                     u"Folder " + base::NumberToString16(number));
+}
+
+void VerticalTabStripFolderBar::RenameFolder(views::View* anchor,
+                                             const BookmarkNode* folder) {
+  if (!folder || !folder->is_folder() || !profile_) {
+    return;
+  }
+  gfx::NativeWindow parent = nullptr;
+  if (anchor && anchor->GetWidget()) {
+    parent = anchor->GetWidget()->GetNativeWindow();
+  }
+  BookmarkEditor::Show(parent, profile_,
+                       BookmarkEditor::EditDetails::EditNode(folder),
+                       BookmarkEditor::NO_TREE);
 }
 
 void VerticalTabStripFolderBar::RemovePin(const BookmarkNode* node) {
