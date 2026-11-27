@@ -17393,6 +17393,25 @@ index 52df491e8c..d9c0a43134 100644
        needs_exclusion = false;
      }
      layout.AddChild(views().toolbar, toolbar_bounds, toolbar_visible);
+diff --git a/chrome/browser/ui/views/frame/opaque_browser_frame_view_layout.cc b/chrome/browser/ui/views/frame/opaque_browser_frame_view_layout.cc
+index 2baf708529..0a93a9ba9c 100644
+--- a/chrome/browser/ui/views/frame/opaque_browser_frame_view_layout.cc
++++ b/chrome/browser/ui/views/frame/opaque_browser_frame_view_layout.cc
+@@ -411,8 +411,14 @@ void OpaqueBrowserFrameViewLayout::ConfigureButton(views::FrameButton button_id,
+       break;
+     }
+     case views::FrameButton::kClose: {
++#if BUILDFLAG(IS_LINUX)
++      // Goatai: no Linux o gerenciador de janelas/fullscreen cuida de fechar;
++      // não desenhamos o "X" na moldura.
++      HideButton(button_id);
++#else
+       SetViewVisibility(close_button_, true);
+       SetBoundsForButton(button_id, close_button_, alignment);
++#endif
+       break;
+     }
+   }
 diff --git a/chrome/browser/ui/views/frame/system_menu_model_builder.cc b/chrome/browser/ui/views/frame/system_menu_model_builder.cc
 index 581402036f..6111061bb9 100644
 --- a/chrome/browser/ui/views/frame/system_menu_model_builder.cc
