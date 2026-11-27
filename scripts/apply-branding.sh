@@ -553,6 +553,13 @@ if '_chrome_output_name = "chrome"' in t:
         "  } else {\n    # Goatai: binário principal com o nome do produto.\n"
         "    _chrome_output_name = \"goatai\"\n  }")
     p.write_text(t)
+    t = p.read_text()
+    t = t.replace(
+        'extract_symbols("chrome_symbols") {\n'
+        '      binary = "$root_out_dir/chrome"',
+        'extract_symbols("chrome_symbols") {\n'
+        '      binary = "$root_out_dir/$_chrome_output_name"')
+    p.write_text(t)
 
 # 8) remove dos menus as opções de horizontal e de desligar auto-expand
 p = src / "chrome/browser/ui/tabs/tab_menu_model.cc"

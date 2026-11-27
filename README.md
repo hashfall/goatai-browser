@@ -110,3 +110,10 @@ Instala `~/.local/share/applications/goatai.desktop` (nome **Goatai**, ícone
 O artefato principal é **`src/out/Default/goatai`**. Um symlink
 `src/out/Default/chrome` aponta para ele por compatibilidade com
 ferramentas/scripts do Chromium. `run.sh` e o atalho `.desktop` usam `goatai`.
+
+## Comando e navegador padrão
+
+- Comando: `goatai` (script em `~/.local/bin/goatai`, instalado manualmente)
+- Associações: `goatai.desktop` é o padrão para `http`, `https`, `text/html` e
+  `application/xhtml+xml` em `~/.config/mimeapps.list`
+- Fish: `BROWSER=goatai` em `~/.config/fish/config.fish`

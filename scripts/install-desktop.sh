@@ -33,6 +33,7 @@ Exec=env CHROME_DESKTOP=goatai.desktop "$BIN" --user-data-dir="$PROFILE" --no-fi
 Icon=goatai
 Terminal=false
 Categories=Network;WebBrowser;
+MimeType=x-scheme-handler/http;x-scheme-handler/https;text/html;application/xhtml+xml;application/x-extension-html;application/x-extension-htm;
 StartupNotify=true
 StartupWMClass=chrome
 EOF

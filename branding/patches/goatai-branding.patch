@@ -1,5 +1,5 @@
 diff --git a/chrome/BUILD.gn b/chrome/BUILD.gn
-index 6149578b26..65c40ae6ad 100644
+index 6149578b26..0e5bec2e9a 100644
 --- a/chrome/BUILD.gn
 +++ b/chrome/BUILD.gn
 @@ -158,7 +158,8 @@ if (!is_android && !is_mac) {
@@ -12,6 +12,26 @@ index 6149578b26..65c40ae6ad 100644
    }
  
    executable("chrome_initial") {
+@@ -1857,7 +1858,7 @@ if (is_linux || is_chromeos) {
+     }
+ 
+     extract_symbols("chrome_symbols") {
+-      binary = "$root_out_dir/chrome"
++      binary = "$root_out_dir/$_chrome_output_name"
+ 
+       if (current_cpu == "x86") {
+         # GYP used "ia32" so keep that naming for back-compat.
+@@ -2022,8 +2023,8 @@ if (is_linux || is_chromeos) {
+ 
+ if (_cros_generate_embed_section_target) {
+   embed_sections("section_embedded_chrome_binary") {
+-    binary_input = "$root_out_dir/chrome"
+-    sections_embedded_binary_output = "$root_out_dir/chrome.sections_embedded"
++    binary_input = "$root_out_dir/$_chrome_output_name"
++    sections_embedded_binary_output = "$root_out_dir/goatai.sections_embedded"
+     deps = [ ":chrome" ]
+   }
+ }
 diff --git a/chrome/app/chromium_strings.grd b/chrome/app/chromium_strings.grd
 index 762418c025..9407f1977c 100644
 --- a/chrome/app/chromium_strings.grd
