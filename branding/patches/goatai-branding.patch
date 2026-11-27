@@ -17369,14 +17369,14 @@ index 801ef978b2..91d64263d1 100644
    bool IsInfobarVisible() const override;
    bool IsContentsSeparatorEnabled() const override;
 diff --git a/chrome/browser/ui/views/frame/layout/browser_view_tabbed_layout_impl.cc b/chrome/browser/ui/views/frame/layout/browser_view_tabbed_layout_impl.cc
-index 52df491e8c..0ac708c1f1 100644
+index 52df491e8c..d9c0a43134 100644
 --- a/chrome/browser/ui/views/frame/layout/browser_view_tabbed_layout_impl.cc
 +++ b/chrome/browser/ui/views/frame/layout/browser_view_tabbed_layout_impl.cc
-@@ -1458,13 +1458,13 @@ gfx::Rect BrowserViewTabbedLayoutImpl::CalculateTopContainerLayout(
+@@ -1458,14 +1458,17 @@ gfx::Rect BrowserViewTabbedLayoutImpl::CalculateTopContainerLayout(
    if (IsParentedTo(views().toolbar, views().top_container)) {
      gfx::Rect toolbar_bounds;
      if (toolbar_visible) {
-+      const int toolbar_height = delegate().GetToolbarHeight();
++      const int full_height = views().toolbar->GetPreferredSize().height();
        toolbar_bounds =
            needs_exclusion
                ? GetBoundsWithExclusion(params, views().toolbar)
@@ -17384,10 +17384,15 @@ index 52df491e8c..0ac708c1f1 100644
                            params.visual_client_area.y(),
 -                          params.visual_client_area.width(),
 -                          views().toolbar->GetPreferredSize().height());
-+                          params.visual_client_area.width(), toolbar_height);
-       params.SetTop(toolbar_bounds.bottom());
+-      params.SetTop(toolbar_bounds.bottom());
++                          params.visual_client_area.width(), full_height);
++      // Goatai: a altura visível (0..cheia) move o conteúdo; a barra em si
++      // mantém a altura cheia e desliza via transform (auto-hide).
++      params.SetTop(params.visual_client_area.y() +
++                    delegate().GetToolbarHeight());
        needs_exclusion = false;
      }
+     layout.AddChild(views().toolbar, toolbar_bounds, toolbar_visible);
 diff --git a/chrome/browser/ui/views/frame/system_menu_model_builder.cc b/chrome/browser/ui/views/frame/system_menu_model_builder.cc
 index 581402036f..6111061bb9 100644
 --- a/chrome/browser/ui/views/frame/system_menu_model_builder.cc
@@ -17431,10 +17436,10 @@ index 581402036f..6111061bb9 100644
                                 IDS_VERTICAL_TABS_SEND_FEEDBACK);
 diff --git a/chrome/browser/ui/views/frame/toolbar_auto_hide.cc b/chrome/browser/ui/views/frame/toolbar_auto_hide.cc
 new file mode 100644
-index 0000000000..c124ef5dfe
+index 0000000000..1a9e8dde2e
 --- /dev/null
 +++ b/chrome/browser/ui/views/frame/toolbar_auto_hide.cc
-@@ -0,0 +1,310 @@
+@@ -0,0 +1,325 @@
 +// Copyright 2026 Goatai. All rights reserved.
 +// Use of this source code is governed by a BSD-style license.
 +
@@ -17454,6 +17459,7 @@ index 0000000000..c124ef5dfe
 +#include "ui/events/keycodes/keyboard_codes.h"
 +#include "ui/events/types/event_type.h"
 +#include "ui/gfx/geometry/point.h"
++#include "ui/gfx/geometry/transform.h"
 +#include "ui/gfx/geometry/rect.h"
 +#include "ui/views/controls/webview/webview.h"
 +#include "ui/views/event_monitor.h"
@@ -17595,6 +17601,10 @@ index 0000000000..c124ef5dfe
 +  top->SetVisible(true);
 +  toolbar_->SetVisible(true);
 +  EnsureLayer();
++  if (toolbar_->layer()) {
++    toolbar_->layer()->SetTransform(gfx::Transform::MakeTranslation(
++        0.0f, static_cast<float>(-full_height_)));
++  }
 +  browser_view_->SetToolbarAutoHideHeight(0);
 +  animation_.SetSlideDuration(kAnimationDuration);
 +  animation_.Reset(0.0);
@@ -17625,6 +17635,9 @@ index 0000000000..c124ef5dfe
 +  full_height_ = current_height;
 +  state_ = State::kHiding;
 +  EnsureLayer();
++  if (toolbar_->layer()) {
++    toolbar_->layer()->SetTransform(gfx::Transform());
++  }
 +  animation_.SetSlideDuration(kAnimationDuration);
 +  animation_.Reset(1.0);
 +  animation_.Hide();
@@ -17639,6 +17652,9 @@ index 0000000000..c124ef5dfe
 +      top->SetVisible(false);
 +    }
 +  }
++  if (toolbar_->layer()) {
++    toolbar_->layer()->SetTransform(gfx::Transform());
++  }
 +  if (created_layer_) {
 +    toolbar_->DestroyLayer();
 +    created_layer_ = false;
@@ -17651,6 +17667,10 @@ index 0000000000..c124ef5dfe
 +  const double value = animation_.GetCurrentValue();
 +  const int height = static_cast<int>(std::lround(full_height_ * value));
 +  browser_view_->SetToolbarAutoHideHeight(height);
++  if (toolbar_->layer()) {
++    toolbar_->layer()->SetTransform(gfx::Transform::MakeTranslation(
++        0.0f, static_cast<float>(height - full_height_)));
++  }
 +}
 +
 +void ToolbarAutoHideController::AnimationEnded(
