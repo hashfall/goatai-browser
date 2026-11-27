@@ -17431,10 +17431,10 @@ index 581402036f..6111061bb9 100644
                                 IDS_VERTICAL_TABS_SEND_FEEDBACK);
 diff --git a/chrome/browser/ui/views/frame/toolbar_auto_hide.cc b/chrome/browser/ui/views/frame/toolbar_auto_hide.cc
 new file mode 100644
-index 0000000000..c639035a89
+index 0000000000..c124ef5dfe
 --- /dev/null
 +++ b/chrome/browser/ui/views/frame/toolbar_auto_hide.cc
-@@ -0,0 +1,319 @@
+@@ -0,0 +1,310 @@
 +// Copyright 2026 Goatai. All rights reserved.
 +// Use of this source code is governed by a BSD-style license.
 +
@@ -17595,9 +17595,6 @@ index 0000000000..c639035a89
 +  top->SetVisible(true);
 +  toolbar_->SetVisible(true);
 +  EnsureLayer();
-+  if (toolbar_->layer()) {
-+    toolbar_->layer()->SetOpacity(0.0f);
-+  }
 +  browser_view_->SetToolbarAutoHideHeight(0);
 +  animation_.SetSlideDuration(kAnimationDuration);
 +  animation_.Reset(0.0);
@@ -17642,9 +17639,6 @@ index 0000000000..c639035a89
 +      top->SetVisible(false);
 +    }
 +  }
-+  if (toolbar_->layer()) {
-+    toolbar_->layer()->SetOpacity(1.0f);
-+  }
 +  if (created_layer_) {
 +    toolbar_->DestroyLayer();
 +    created_layer_ = false;
@@ -17657,9 +17651,6 @@ index 0000000000..c639035a89
 +  const double value = animation_.GetCurrentValue();
 +  const int height = static_cast<int>(std::lround(full_height_ * value));
 +  browser_view_->SetToolbarAutoHideHeight(height);
-+  if (toolbar_->layer()) {
-+    toolbar_->layer()->SetOpacity(static_cast<float>(value));
-+  }
 +}
 +
 +void ToolbarAutoHideController::AnimationEnded(

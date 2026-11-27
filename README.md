@@ -1,6 +1,6 @@
 # GoatAI Browser
 
-**Versão atual: v0.5.0** — Chromium 160.0.8187.0
+**Versão atual: v0.5.1** — Chromium 160.0.8187.0
 
 Navegador baseado no Chromium (upstream, sem histórico), com branding Goatai,
 tema retrô vaporwave (cantos retos, bordas neon), abas verticais e
@@ -8,8 +8,13 @@ folders de pins com perfis de cor.
 
 ## Versão
 
-- `VERSION` / tag git `v0.5.0`
+- `VERSION` / tag git `v0.5.1`
 - Commit de referência: o commit imediatamente anterior à tag
+
+### v0.5.1
+
+- Auto-hide vira animação de "drawer": a barra recolhe/expande em 500 ms, sem
+  fade de opacidade
 
 ### v0.5.0
 
@@ -207,7 +212,7 @@ O ícone de chat com sparkle na toolbar abre o painel lateral direito.
 ## Toolbar com auto-hide
 
 A barra superior desliza para fora do topo quando você está usando a página e o
-mouse não está sobre ela (animação de 200 ms). Para trazê-la de volta:
+mouse não está sobre ela (animação de 500 ms, sem fade). Para trazê-la de volta:
 
 - encoste o mouse na borda superior da janela (faixa de 4px);
 - use Ctrl+L / Ctrl+K / Ctrl+E / Ctrl+T, Alt+D ou F6.
