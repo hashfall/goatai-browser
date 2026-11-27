@@ -65,3 +65,9 @@ arquivos.
 - Pin solto: clique direito no tile → **Remove pin** (ou Open).
 - Pin dentro de folder: menu do folder → submenu **Remove pin** com os pins.
 - Remoção usa `BookmarkModel::Remove`; a barra reconstrói via observer.
+
+### IDs de comando únicos
+
+Menus com submenus (`Color`, `Remove pin`) usam IDs 2000+/3000+ e o menu do
+folder 1000+. Antes, `Delete folder` (id 2) colidia com `Blue` (id 2) do
+submenu de cor e acabava só pintando o folder.

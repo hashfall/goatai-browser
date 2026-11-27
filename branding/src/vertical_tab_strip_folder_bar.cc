@@ -202,9 +202,9 @@ class RemovePinMenuDelegate : public ui::SimpleMenuModel::Delegate {
       : bar_(bar), nodes_(std::move(nodes)) {}
 
   void ExecuteCommand(int command_id, int event_flags) override {
-    if (bar_ && command_id >= 0 &&
-        command_id < static_cast<int>(nodes_.size())) {
-      bar_->RemovePin(nodes_[command_id]);
+    const int index = command_id - 3000;
+    if (bar_ && index >= 0 && index < static_cast<int>(nodes_.size())) {
+      bar_->RemovePin(nodes_[index]);
     }
   }
 
@@ -225,17 +225,20 @@ class FolderColorMenuDelegate : public ui::SimpleMenuModel::Delegate {
     if (!bar_ || !node_) {
       return;
     }
-    if (command_id == 0) {
+    if (command_id == kColorDefaultCommand) {
       bar_->SetFolderColor(node_, std::nullopt);
     } else {
       bar_->SetFolderColor(
-          node_, static_cast<tab_groups::TabGroupColorId>(command_id - 1));
+          node_, static_cast<tab_groups::TabGroupColorId>(
+                     command_id - kColorDefaultCommand - 1));
     }
   }
 
   bool IsCommandIdChecked(int command_id) const override {
     return command_id == selected_;
   }
+
+  static constexpr int kColorDefaultCommand = 2000;
 
  private:
   raw_ptr<VerticalTabStripFolderBar> bar_;
@@ -294,7 +297,8 @@ class NodeContextMenuDelegate : public ui::SimpleMenuModel::Delegate {
   NodeContextMenuDelegate(VerticalTabStripFolderBar* bar,
                           const BookmarkNode* node)
       : bar_(bar), node_(node) {}
-  enum Command { kOpenAll, kPinHere, kDelete };
+  // IDs únicos (evita colisão com os submenus de cor/pins).
+  enum Command { kOpenAll = 1000, kPinHere = 1001, kDelete = 1002 };
   void ExecuteCommand(int command_id, int event_flags) override {
     if (!bar_ || !node_) {
       return;
@@ -561,23 +565,28 @@ class GoataiFolderTile : public GoataiBaseTile {
     menu_model_->AddItem(NodeContextMenuDelegate::kPinHere,
                          u"Pin current tab here");
 
+    const int selected_index = SelectedColorCommand(node_);
+    const int selected_command =
+        selected_index == 0
+            ? FolderColorMenuDelegate::kColorDefaultCommand
+            : FolderColorMenuDelegate::kColorDefaultCommand + selected_index;
     color_menu_delegate_ = std::make_unique<FolderColorMenuDelegate>(
-        bar_, node_, SelectedColorCommand(node_));
+        bar_, node_, selected_command);
     color_submenu_ = std::make_unique<ui::SimpleMenuModel>(
         color_menu_delegate_.get());
-    const int selected = SelectedColorCommand(node_);
     color_submenu_->AddItemWithIcon(
-        0, u"Default",
-        ColorDot(gfx::kGoogleGrey500, selected == 0));
+        FolderColorMenuDelegate::kColorDefaultCommand, u"Default",
+        ColorDot(gfx::kGoogleGrey500, selected_index == 0));
     const auto& labels = tab_groups::GetTabGroupColorLabelMap();
     for (const auto& entry : kFolderColors) {
-      const int command = static_cast<int>(entry.id) + 1;
+      const int command = FolderColorMenuDelegate::kColorDefaultCommand + 1 +
+                          static_cast<int>(entry.id);
       const auto it = labels.find(entry.id);
       color_submenu_->AddItemWithIcon(
           command, it != labels.end() ? it->second : std::u16string(),
-          ColorDot(entry.color, selected == command));
+          ColorDot(entry.color, selected_command == command));
     }
-    menu_model_->AddSubMenu(100, u"Color", color_submenu_.get());
+    menu_model_->AddSubMenu(9000, u"Color", color_submenu_.get());
 
     std::vector<raw_ptr<const BookmarkNode>> pins;
     for (const auto& child : node_->children()) {
@@ -591,10 +600,10 @@ class GoataiFolderTile : public GoataiBaseTile {
       remove_submenu_ = std::make_unique<ui::SimpleMenuModel>(
           remove_menu_delegate_.get());
       for (size_t i = 0; i < pins.size(); ++i) {
-        remove_submenu_->AddItem(static_cast<int>(i),
+        remove_submenu_->AddItem(3000 + static_cast<int>(i),
                                  pins[i]->GetTitle());
       }
-      menu_model_->AddSubMenu(101, u"Remove pin", remove_submenu_.get());
+      menu_model_->AddSubMenu(9001, u"Remove pin", remove_submenu_.get());
     }
 
     menu_model_->AddSeparator(ui::NORMAL_SEPARATOR);
