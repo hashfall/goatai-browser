@@ -1,0 +1,65 @@
+<!doctype html>
+<html dir="ltr" lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Goatai IA</title>
+  <link rel="stylesheet" href="panel.css">
+</head>
+<body>
+  <header>
+    <div class="brand">GOATAI<span>IA</span></div>
+    <button id="settingsToggle" class="icon" title="Configurar" aria-label="Configurar">⚙</button>
+  </header>
+
+  <section id="settings">
+    <label class="field">
+      <span>Provedor</span>
+      <select id="provider">
+        <option value="gpt">GPT (OpenAI)</option>
+        <option value="gemini">Gemini (Google)</option>
+        <option value="deepseek">DeepSeek</option>
+        <option value="claude">Claude (Anthropic)</option>
+      </select>
+    </label>
+
+    <label class="field">
+      <span>Modelo</span>
+      <input id="model" type="text" spellcheck="false" autocomplete="off">
+    </label>
+
+    <label class="field">
+      <span>Chave de API</span>
+      <input id="apiKey" type="password" spellcheck="false" autocomplete="off"
+             placeholder="cole a chave do provedor">
+    </label>
+
+    <div class="row">
+      <button id="saveKey" class="primary">Salvar chave</button>
+      <button id="clearKey">Remover</button>
+    </div>
+    <p id="keyState" class="hint"></p>
+
+    <label class="check">
+      <input type="checkbox" id="control">
+      <span>Permitir que a IA controle o navegador</span>
+    </label>
+    <p class="hint warn">
+      A chave fica apenas na memória da extensão (chrome.storage.session):
+      não vai para o disco e some quando o navegador fecha. As requisições
+      saem do processo da extensão, nunca da página que você visita.
+    </p>
+  </section>
+
+  <main id="messages" aria-live="polite"></main>
+
+  <div id="status" hidden></div>
+
+  <footer>
+    <textarea id="input" rows="2" placeholder="Pergunte ou peça uma ação…"></textarea>
+    <button id="send" class="primary" title="Enviar" aria-label="Enviar">➤</button>
+  </footer>
+
+  <script src="panel.js"></script>
+</body>
+</html>

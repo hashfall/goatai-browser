@@ -1,6 +1,6 @@
 # GoatAI Browser
 
-**Versão atual: v0.2.1** — Chromium 160.0.8187.0
+**Versão atual: v0.3.0** — Chromium 160.0.8187.0
 
 Navegador baseado no Chromium (upstream, sem histórico), com branding Goatai,
 tema retrô vaporwave (cantos retos, bordas neon), abas verticais e
@@ -8,8 +8,18 @@ folders de pins com perfis de cor.
 
 ## Versão
 
-- `VERSION` / tag git `v0.2.1`
+- `VERSION` / tag git `v0.3.0`
 - Commit de referência: o commit imediatamente anterior à tag
+
+### v0.3.0
+
+- Painel lateral direito **Goatai IA** com botão de toggle na toolbar
+- Provedores: GPT (OpenAI), Gemini, DeepSeek e Claude (modelo editável)
+- Chave de API só em memória (`chrome.storage.session`), sem disco/logs
+- A IA pode controlar o navegador: abrir/alternar/fechar abas, navegar,
+  ler a página, clicar, digitar e rolar (toggle de permissão no painel)
+- Painel é um side panel nativo que hospeda a página da extensão
+  `extensions/goatai_ai` (carregada via `--load-extension`)
 
 ### v0.2.1
 
@@ -160,3 +170,20 @@ Tema embutido, quadrado e com bordas neon (não depende de extensão):
 Para voltar ao visual padrão, reverta o patch:
 `git -C src checkout ...` ou reaplique a árvore limpa e rode
 `scripts/apply-branding.sh`.
+
+## Painel Goatai IA
+
+O ícone de chat com sparkle na toolbar abre o painel lateral direito.
+
+- **Provedores**: GPT, Gemini, DeepSeek e Claude. O nome do modelo é editável
+  para acompanhar atualizações dos provedores.
+- **Chave de API**: guardada apenas na memória da extensão
+  (`chrome.storage.session`); não vai para o disco, para o perfil nem para
+  logs, e desaparece quando o navegador fecha.
+- **Controle do navegador**: com "Permitir que a IA controle o navegador"
+  ligado, ela pode abrir/alternar/fechar abas, navegar, ler o texto da página,
+  clicar por seletor ou texto, digitar e rolar. Desligue o toggle para usar
+  apenas como chat.
+- A extensão fica em `extensions/goatai_ai` e é carregada pelo `goatai`
+  (`--load-extension`). O painel nativo apenas hospeda essa página; as
+  requisições saem do processo da extensão.

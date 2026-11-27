@@ -3113,6 +3113,20 @@ index 762418c025..9407f1977c 100644
        </message>
      </messages>
    </release>
+diff --git a/chrome/app/generated_resources.grd b/chrome/app/generated_resources.grd
+index 811d895b91..b2d22eb128 100644
+--- a/chrome/app/generated_resources.grd
++++ b/chrome/app/generated_resources.grd
+@@ -8639,6 +8639,9 @@ Keep your key file in a safe place. You will need it to create new versions of y
+           Reading list
+         </message>
+       </if>
++      <message name="IDS_GOATAI_CHAT_TITLE" desc="Título do painel lateral de IA do Goatai.">
++        Goatai IA
++      </message>
+       <message name="IDS_READ_LATER_EXPAND_BUTTON_ARIA_LABEL" desc="Aria label for the Read later list expand button.">
+         Expand <ph name="HEADER">$1<ex>Unread</ex></ph>
+       </message>
 diff --git a/chrome/app/settings_chromium_strings.grdp b/chrome/app/settings_chromium_strings.grdp
 index 1c4429bc3c..1e9e193aec 100644
 --- a/chrome/app/settings_chromium_strings.grdp
@@ -10368,6 +10382,592 @@ z+~jKS{<1`c)iXhC!L%m^3)5FL)Fm#B*tuKm^!EcnKU!Rwa{B~d=?E6S{FM{B>RkNn
 z-r4JabwBJiw<})t{-yE$CA0lKTnp~sUu9I|r0u_Lewn9vdgaW#t9pz5rmkDxbv{8o
 xMDmwT6pOoS{@PEWxhw0=T|ReMI{zO(%Tisx(0PKV7#J8BJYD@<);T3K0RRVK(SiT~
 
+diff --git a/chrome/browser/browser_resources.grd b/chrome/browser/browser_resources.grd
+index c1b55f0b74..e076650988 100644
+--- a/chrome/browser/browser_resources.grd
++++ b/chrome/browser/browser_resources.grd
+@@ -97,6 +97,10 @@
+     <includes>
+       <if expr="is_win or is_macosx or is_linux">
+         <!-- First Run audio resources -->
++        <!-- Goatai IA (painel lateral). -->
++        <include name="IDR_GOATAI_CHAT_INDEX_HTML" file="resources\goatai_chat\index.html" type="BINDATA" />
++        <include name="IDR_GOATAI_CHAT_APP_CSS" file="resources\goatai_chat\app.css" type="BINDATA" />
++        <include name="IDR_GOATAI_CHAT_APP_JS" file="resources\goatai_chat\app.js" type="BINDATA" />
+         <include name="IDR_INTRO_SOUND_ALL_SET_FLAC" file="resources\intro\sounds\all_set.flac" type="BINDATA" />
+         <include name="IDR_INTRO_SOUND_AMBIENT_FLAC" file="resources\intro\sounds\ambient.flac" type="BINDATA" />
+         <include name="IDR_INTRO_SOUND_FEATURE_SHOWCASE_AMBIENT_FLAC" file="resources\intro\sounds\feature_showcase_ambient.flac" type="BINDATA" />
+diff --git a/chrome/browser/prefs/browser_prefs.cc b/chrome/browser/prefs/browser_prefs.cc
+index 1b4fe072fc..2e1a5a25ac 100644
+--- a/chrome/browser/prefs/browser_prefs.cc
++++ b/chrome/browser/prefs/browser_prefs.cc
+@@ -3,6 +3,7 @@
+ // found in the LICENSE file.
+ 
+ #include "chrome/browser/prefs/browser_prefs.h"
++#include "chrome/browser/ui/webui/goatai_chat/goatai_chat_prefs.h"
+ 
+ #include <array>
+ #include <optional>
+@@ -2147,6 +2148,15 @@ void RegisterLocalState(PrefRegistrySimple* registry) {
+ void RegisterProfilePrefs(user_prefs::PrefRegistrySyncable* registry,
+                           const std::string& locale) {
+   TRACE_EVENT0("browser", "chrome::RegisterProfilePrefs");
++  // Goatai IA: preferências do painel de chat.
++  registry->RegisterStringPref(goatai::kChatProviderPref, "gpt");
++  registry->RegisterBooleanPref(goatai::kChatControlPref, true);
++  for (const char* provider : {"gpt", "gemini", "deepseek", "claude"}) {
++    registry->RegisterStringPref(
++        base::StrCat({goatai::kChatKeyPrefPrefix, provider}), std::string());
++    registry->RegisterStringPref(
++        base::StrCat({goatai::kChatModelPrefPrefix, provider}), std::string());
++  }
+   // User prefs. Please keep this list alphabetized.
+   AccessibilityLabelsService::RegisterProfilePrefs(registry);
+   registry->RegisterBooleanPref(prefs::kRendererAccessibilityEnabled, true);
+diff --git a/chrome/browser/resources/goatai_chat/app.css b/chrome/browser/resources/goatai_chat/app.css
+new file mode 100644
+index 0000000000..25ed25bdb8
+--- /dev/null
++++ b/chrome/browser/resources/goatai_chat/app.css
+@@ -0,0 +1,275 @@
++/* Goatai IA — tema retrô vaporwave (quadrado, neon). */
++
++:root {
++  --bg: #0a0420;
++  --panel: #10062a;
++  --field: #12062b;
++  --field-hover: #1b0b3b;
++  --cyan: #05d9e8;
++  --magenta: #ff2a6d;
++  --text: #e8f9ff;
++  --muted: #7dd3fc;
++  --border: #05d9e8;
++}
++
++* {
++  border-radius: 0 !important;
++  box-sizing: border-box;
++}
++
++html,
++body {
++  height: 100%;
++  margin: 0;
++}
++
++body {
++  background:
++    linear-gradient(rgba(5, 217, 232, .07) 1px, transparent 1px),
++    linear-gradient(90deg, rgba(5, 217, 232, .07) 1px, transparent 1px),
++    linear-gradient(180deg, rgba(255, 42, 109, .16), transparent 55%),
++    var(--bg);
++  background-size: 28px 28px, 28px 28px, 100% 100%, 100% 100%;
++  color: var(--text);
++  font-family: 'DejaVu Sans Mono', 'Courier New', monospace;
++  font-size: 13px;
++}
++
++#app {
++  display: flex;
++  flex-direction: column;
++  height: 100%;
++}
++
++header {
++  align-items: center;
++  background: var(--panel);
++  border-bottom: 1px solid var(--cyan);
++  box-shadow: 0 1px 10px rgba(5, 217, 232, .35);
++  display: flex;
++  justify-content: space-between;
++  padding: 10px 12px;
++}
++
++.brand {
++  color: var(--cyan);
++  font-weight: 700;
++  letter-spacing: 2px;
++  text-shadow: 0 0 8px rgba(5, 217, 232, .7);
++}
++
++.brand span {
++  color: var(--magenta);
++  margin-left: 4px;
++  text-shadow: 0 0 8px rgba(255, 42, 109, .7);
++}
++
++button {
++  background: var(--field);
++  border: 1px solid var(--cyan);
++  color: var(--cyan);
++  cursor: pointer;
++  font-family: inherit;
++  font-size: 12px;
++  padding: 7px 10px;
++  transition: background-color .12s linear, box-shadow .12s linear;
++}
++
++button:hover {
++  background: var(--field-hover);
++  box-shadow: 0 0 10px rgba(5, 217, 232, .45);
++}
++
++button.primary {
++  background: var(--magenta);
++  border-color: var(--magenta);
++  color: #fff;
++  font-weight: 700;
++}
++
++button.primary:hover {
++  box-shadow: 0 0 12px rgba(255, 42, 109, .6);
++}
++
++button.icon {
++  border: none;
++  background: transparent;
++  font-size: 16px;
++  padding: 2px 6px;
++}
++
++#settings {
++  background: var(--panel);
++  border-bottom: 1px solid var(--cyan);
++  display: flex;
++  flex-direction: column;
++  gap: 9px;
++  padding: 12px;
++}
++
++#settings[hidden] {
++  display: none;
++}
++
++.field {
++  display: flex;
++  flex-direction: column;
++  gap: 4px;
++}
++
++.field > span {
++  color: var(--muted);
++  font-size: 11px;
++  letter-spacing: 1px;
++  text-transform: uppercase;
++}
++
++input,
++select,
++textarea {
++  background: var(--field);
++  border: 1px solid var(--cyan);
++  color: var(--text);
++  font-family: inherit;
++  font-size: 13px;
++  outline: none;
++  padding: 8px;
++  width: 100%;
++}
++
++input:focus,
++select:focus,
++textarea:focus {
++  box-shadow: 0 0 0 1px var(--cyan), 0 0 12px rgba(5, 217, 232, .4);
++}
++
++select option {
++  background: var(--panel);
++}
++
++.row {
++  display: flex;
++  gap: 8px;
++}
++
++.row button {
++  flex: 1;
++}
++
++.check {
++  align-items: flex-start;
++  display: flex;
++  gap: 8px;
++  line-height: 1.35;
++}
++
++.check input {
++  accent-color: var(--cyan);
++  margin-top: 2px;
++  width: auto;
++}
++
++.hint {
++  color: var(--muted);
++  font-size: 11px;
++  line-height: 1.4;
++  margin: 0;
++}
++
++.hint.warn {
++  color: #ffb3c9;
++}
++
++main {
++  display: flex;
++  flex: 1;
++  flex-direction: column;
++  gap: 10px;
++  overflow-y: auto;
++  padding: 12px;
++}
++
++.msg {
++  border: 1px solid rgba(5, 217, 232, .35);
++  padding: 9px 10px;
++  white-space: pre-wrap;
++  word-wrap: break-word;
++}
++
++.msg.user {
++  border-color: rgba(255, 42, 109, .6);
++  color: #ffd9e6;
++}
++
++.msg.assistant {
++  background: rgba(5, 217, 232, .04);
++}
++
++.msg.system {
++  border-color: rgba(255, 42, 109, .5);
++  color: #ffb3c9;
++  font-size: 12px;
++}
++
++.msg.action {
++  border: none;
++  border-left: 2px solid var(--magenta);
++  color: var(--muted);
++  font-size: 11px;
++  padding: 2px 8px;
++}
++
++.msg code {
++  background: rgba(5, 217, 232, .12);
++  color: var(--cyan);
++  padding: 1px 4px;
++}
++
++.msg pre {
++  background: #07021a;
++  border: 1px solid rgba(5, 217, 232, .35);
++  overflow-x: auto;
++  padding: 8px;
++}
++
++#status {
++  align-items: center;
++  color: var(--cyan);
++  display: flex;
++  font-size: 11px;
++  gap: 8px;
++  padding: 0 12px 6px;
++}
++
++#status[hidden] {
++  display: none;
++}
++
++#status::before {
++  animation: pulse 1s infinite steps(2);
++  content: '▮';
++  color: var(--magenta);
++}
++
++@keyframes pulse {
++  50% { opacity: .2; }
++}
++
++footer {
++  align-items: flex-end;
++  background: var(--panel);
++  border-top: 1px solid var(--cyan);
++  display: flex;
++  gap: 8px;
++  padding: 10px 12px;
++}
++
++footer textarea {
++  flex: 1;
++  resize: none;
++}
++
++footer button {
++  height: 42px;
++  width: 46px;
++}
+diff --git a/chrome/browser/resources/goatai_chat/app.js b/chrome/browser/resources/goatai_chat/app.js
+new file mode 100644
+index 0000000000..94206226ae
+--- /dev/null
++++ b/chrome/browser/resources/goatai_chat/app.js
+@@ -0,0 +1,185 @@
++// Goatai IA — front-end do painel lateral.
++// Toda a lógica de rede/chaves fica no processo do navegador (C++).
++
++'use strict';
++
++const DEFAULT_MODELS = {
++  gpt: 'gpt-4.1-mini',
++  gemini: 'gemini-2.5-flash',
++  deepseek: 'deepseek-chat',
++  claude: 'claude-sonnet-4-5',
++};
++
++const state = {
++  provider: 'gpt',
++  model: DEFAULT_MODELS.gpt,
++  control: true,
++  hasKey: false,
++  busy: false,
++};
++
++const $ = (id) => document.getElementById(id);
++
++function escapeHtml(text) {
++  return String(text)
++      .replaceAll('&', '&amp;')
++      .replaceAll('<', '&lt;')
++      .replaceAll('>', '&gt;')
++      .replaceAll('"', '&quot;')
++      .replaceAll("'", '&#39;');
++}
++
++// Markdown mínimo e seguro: negrito, código inline e blocos de código.
++function renderMarkdown(text) {
++  const parts = String(text).split(/```/);
++  return parts.map((part, index) => {
++    if (index % 2 === 1) {
++      return `<pre><code>${escapeHtml(part.replace(/^\w*\n/, ''))}</code></pre>`;
++    }
++    return escapeHtml(part)
++        .replace(/`([^`]+)`/g, '<code>$1</code>')
++        .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
++  }).join('');
++}
++
++function addMessage(role, text) {
++  const el = document.createElement('div');
++  el.className = `msg ${role}`;
++  if (role === 'assistant') {
++    el.innerHTML = renderMarkdown(text);
++  } else {
++    el.textContent = text;
++  }
++  $('messages').appendChild(el);
++  $('messages').scrollTop = $('messages').scrollHeight;
++  return el;
++}
++
++function setBusy(busy) {
++  state.busy = busy;
++  $('send').disabled = busy;
++  $('status').hidden = !busy;
++}
++
++function updateKeyState(masked, hasKey) {
++  state.hasKey = !!hasKey;
++  const el = $('keyState');
++  if (!hasKey) {
++    el.textContent = 'Nenhuma chave salva para este provedor.';
++  } else if (masked) {
++    el.textContent = `Chave salva: ${masked}`;
++  } else {
++    el.textContent = 'Chave salva (cifrada).';
++  }
++}
++
++function applyState(s) {
++  if (!s) return;
++  if (s.provider) {
++    state.provider = s.provider;
++    $('provider').value = s.provider;
++  }
++  if (s.model) {
++    state.model = s.model;
++    $('model').value = s.model;
++  }
++  if (typeof s.control === 'boolean') {
++    state.control = s.control;
++    $('control').checked = s.control;
++  }
++  updateKeyState(s.masked || '', s.hasKey);
++}
++
++function sendKey() {
++  const key = $('apiKey').value.trim();
++  if (!key) return;
++  chrome.send('goatai.saveKey', [state.provider, key]);
++  $('apiKey').value = '';
++}
++
++function sendMessage() {
++  const text = $('input').value.trim();
++  if (!text || state.busy) return;
++  addMessage('user', text);
++  $('input').value = '';
++  setBusy(true);
++  chrome.send('goatai.send', [text]);
++}
++
++function init() {
++  $('settingsToggle').addEventListener('click', () => {
++    $('settings').hidden = !$('settings').hidden;
++  });
++
++  $('provider').addEventListener('change', () => {
++    state.provider = $('provider').value;
++    state.model = DEFAULT_MODELS[state.provider] || '';
++    $('model').value = state.model;
++    chrome.send('goatai.setProvider', [state.provider]);
++  });
++
++  $('model').addEventListener('change', () => {
++    state.model = $('model').value.trim() || DEFAULT_MODELS[state.provider];
++    $('model').value = state.model;
++    chrome.send('goatai.setModel', [state.model]);
++  });
++
++  $('control').addEventListener('change', () => {
++    state.control = $('control').checked;
++    chrome.send('goatai.setControl', [state.control]);
++  });
++
++  $('saveKey').addEventListener('click', sendKey);
++  $('apiKey').addEventListener('keydown', (e) => {
++    if (e.key === 'Enter') {
++      e.preventDefault();
++      sendKey();
++    }
++  });
++  $('clearKey').addEventListener('click', () => {
++    chrome.send('goatai.clearKey', [state.provider]);
++  });
++
++  $('send').addEventListener('click', sendMessage);
++  $('input').addEventListener('keydown', (e) => {
++    if (e.key === 'Enter' && !e.shiftKey) {
++      e.preventDefault();
++      sendMessage();
++    }
++  });
++
++  chrome.send('goatai.getState', []);
++}
++
++window.goataiChatEvent = function(payload) {
++  let event;
++  try {
++    event = JSON.parse(payload);
++  } catch (e) {
++    return;
++  }
++  switch (event.type) {
++    case 'state':
++      applyState(event);
++      break;
++    case 'reply':
++      addMessage('assistant', event.text || '');
++      setBusy(false);
++      break;
++    case 'error':
++      addMessage('system', event.message || 'Erro desconhecido.');
++      setBusy(false);
++      break;
++    case 'status':
++      $('status').textContent = event.text || 'Pensando…';
++      break;
++    case 'action':
++      addMessage('action', event.text || '');
++      break;
++    case 'clear':
++      $('messages').textContent = '';
++      break;
++  }
++};
++
++document.addEventListener('DOMContentLoaded', init);
+diff --git a/chrome/browser/resources/goatai_chat/index.html b/chrome/browser/resources/goatai_chat/index.html
+new file mode 100644
+index 0000000000..ffa192581e
+--- /dev/null
++++ b/chrome/browser/resources/goatai_chat/index.html
+@@ -0,0 +1,65 @@
++<!doctype html>
++<html dir="ltr" lang="pt-BR">
++<head>
++  <meta charset="utf-8">
++  <meta name="viewport" content="width=device-width, initial-scale=1">
++  <title>Goatai IA</title>
++  <link rel="stylesheet" href="app.css">
++</head>
++<body>
++  <div id="app">
++    <header>
++      <div class="brand">GOATAI<span>IA</span></div>
++      <button id="settingsToggle" class="icon" title="Configurar" aria-label="Configurar">⚙</button>
++    </header>
++
++    <section id="settings" hidden>
++      <label class="field">
++        <span>Provedor</span>
++        <select id="provider">
++          <option value="gpt">GPT (OpenAI)</option>
++          <option value="gemini">Gemini (Google)</option>
++          <option value="deepseek">DeepSeek</option>
++          <option value="claude">Claude (Anthropic)</option>
++        </select>
++      </label>
++
++      <label class="field">
++        <span>Modelo</span>
++        <input id="model" type="text" spellcheck="false" autocomplete="off">
++      </label>
++
++      <label class="field">
++        <span>Chave de API</span>
++        <input id="apiKey" type="password" spellcheck="false" autocomplete="off"
++               placeholder="cole a chave do provedor">
++      </label>
++
++      <div class="row">
++        <button id="saveKey" class="primary">Salvar chave</button>
++        <button id="clearKey">Remover</button>
++      </div>
++      <p id="keyState" class="hint"></p>
++
++      <label class="check">
++        <input type="checkbox" id="control">
++        <span>Permitir que a IA controle o navegador</span>
++      </label>
++      <p class="hint warn">
++        A chave é cifrada pelo cofre do sistema (libsecret/kwallet) e nunca é
++        enviada para a página. As requisições saem do processo do navegador.
++      </p>
++    </section>
++
++    <main id="messages" aria-live="polite"></main>
++
++    <div id="status" hidden></div>
++
++    <footer>
++      <textarea id="input" rows="2" placeholder="Pergunte ou peça uma ação…"></textarea>
++      <button id="send" class="primary" title="Enviar" aria-label="Enviar">➤</button>
++    </footer>
++  </div>
++  <script src="app.js"></script>
++</body>
++</html>
 diff --git a/chrome/browser/resources/new_tab_page/BUILD.gn b/chrome/browser/resources/new_tab_page/BUILD.gn
 index b384a078b6..c3148f4a67 100644
 --- a/chrome/browser/resources/new_tab_page/BUILD.gn
@@ -15892,6 +16492,69 @@ index 693ef04ab2..c48c2ac221 100644
  }
  
  std::string GetProgramClassClassForDesktopId(
+diff --git a/chrome/browser/ui/actions/chrome_action_id.h b/chrome/browser/ui/actions/chrome_action_id.h
+index 7d71d0035f..af83d5fe73 100644
+--- a/chrome/browser/ui/actions/chrome_action_id.h
++++ b/chrome/browser/ui/actions/chrome_action_id.h
+@@ -342,6 +342,7 @@
+   E(kActionSidePanelShowFeed) \
+   E(kActionSidePanelShowGeic) \
+   E(kActionSidePanelShowGlic) \
++  E(kActionSidePanelShowGoataiChat) \
+   E(kActionSidePanelShowContextualTasks) \
+   E(kActionSidePanelShowHistoryCluster, IDC_SHOW_HISTORY_CLUSTERS_SIDE_PANEL) \
+   E(kActionSidePanelShowHistory, IDC_SHOW_HISTORY_SIDE_PANEL) \
+diff --git a/chrome/browser/ui/browser_actions.cc b/chrome/browser/ui/browser_actions.cc
+index aaff7626c1..9b2349b050 100644
+--- a/chrome/browser/ui/browser_actions.cc
++++ b/chrome/browser/ui/browser_actions.cc
+@@ -3,6 +3,7 @@
+ // found in the LICENSE file.
+ 
+ #include "chrome/browser/ui/browser_actions.h"
++#include "chrome/browser/ui/toolbar/pinned_toolbar/pinned_toolbar_actions_model.h"
+ 
+ #include <memory>
+ #include <optional>
+@@ -494,6 +495,15 @@ void BrowserActions::InitializeSidePanelActions() {
+               CreateToggleSidePanelActionCallback(
+                   SidePanelEntryKey(SidePanelEntryId::kBookmarks), bwi)))
+           .Build());
++  root_action_item_->AddChild(
++      SidePanelAction(SidePanelEntryId::kGoataiChat, IDS_GOATAI_CHAT_TITLE,
++                      IDS_GOATAI_CHAT_TITLE, vector_icons::kChatSparkIcon,
++                      kActionSidePanelShowGoataiChat, bwi, true)
++          .Build());
++  if (PinnedToolbarActionsModel* pinned =
++          PinnedToolbarActionsModel::Get(profile)) {
++    pinned->UpdatePinnedState(kActionSidePanelShowGoataiChat, true);
++  }
+   root_action_item_->AddChild(
+       SidePanelAction(SidePanelEntryId::kReadingList, IDS_READ_LATER_TITLE,
+                       IDS_READ_LATER_TITLE,
+diff --git a/chrome/browser/ui/browser_window/internal/browser_window_features.cc b/chrome/browser/ui/browser_window/internal/browser_window_features.cc
+index 638511be69..6ccd67b581 100644
+--- a/chrome/browser/ui/browser_window/internal/browser_window_features.cc
++++ b/chrome/browser/ui/browser_window/internal/browser_window_features.cc
+@@ -159,6 +159,7 @@
+ #include "chrome/browser/ui/views/side_panel/comments/comments_side_panel_coordinator.h"
+ #include "chrome/browser/ui/views/side_panel/history/history_side_panel_coordinator.h"
+ #include "chrome/browser/ui/views/side_panel/history_clusters/history_clusters_side_panel_coordinator.h"
++#include "chrome/browser/ui/views/side_panel/goatai_chat/goatai_chat_side_panel_web_view.h"
+ #include "chrome/browser/ui/views/side_panel/reading_list/reading_list_side_panel_coordinator.h"
+ #include "chrome/browser/ui/views/side_panel/side_panel_coordinator.h"
+ #include "chrome/browser/ui/views/side_panel/tabs_from_other_devices/tabs_from_other_devices_side_panel_coordinator.h"
+@@ -961,6 +962,10 @@ void BrowserWindowFeatures::InitPostWindowConstruction(
+       GetUserDataFactory().CreateInstance<ReadingListSidePanelCoordinator>(
+           *browser, browser, profile);
+ 
++  // Goatai IA: painel lateral disponível desde o início (a ação da toolbar
++  // depende do registro para alternar).
++  RegisterGoataiChatSidePanel(browser, profile);
++
+   if (browser_view) {
+     skills_ui_window_controller_ =
+         std::make_unique<skills::SkillsUiWindowController>(browser_);
 diff --git a/chrome/browser/ui/color/BUILD.gn b/chrome/browser/ui/color/BUILD.gn
 index 9899d84c43..af7a949f9f 100644
 --- a/chrome/browser/ui/color/BUILD.gn
@@ -16174,6 +16837,18 @@ index 01c89d9f34..5eff2afd2a 100644
      case LayoutConstant::kVerticalTabHeight:
        return 30;
      case LayoutConstant::kVerticalTabPinnedHeight:
+diff --git a/chrome/browser/ui/side_panel/side_panel_entry_id.h b/chrome/browser/ui/side_panel/side_panel_entry_id.h
+index 3e9dc27c0b..e2fc5dc0ef 100644
+--- a/chrome/browser/ui/side_panel/side_panel_entry_id.h
++++ b/chrome/browser/ui/side_panel/side_panel_entry_id.h
+@@ -41,6 +41,7 @@
+   V(kComments, kActionSidePanelShowComments, "Comments")                      \
+   V(kGeic, kActionSidePanelShowGeic, "Geic")                                  \
+   V(kGlic, kActionSidePanelShowGlic, "Glic")                                  \
++  V(kGoataiChat, kActionSidePanelShowGoataiChat, "GoataiChat")                                  \
+   V(kTabsFromOtherDevices, kActionSidePanelShowTabsFromOtherDevices,          \
+     "TabsFromOtherDevices")                                                   \
+   V(kSidePanelDev, std::nullopt, "SidePanelDev")                              \
 diff --git a/chrome/browser/ui/tabs/tab_menu_model.cc b/chrome/browser/ui/tabs/tab_menu_model.cc
 index 7dcdbcfdbf..70095e070a 100644
 --- a/chrome/browser/ui/tabs/tab_menu_model.cc
@@ -18246,6 +18921,165 @@ index 85b2574da8..3ca27a1307 100644
  
  #if BUILDFLAG(OS_LEVEL_GEOLOCATION_PERMISSION_SUPPORTED)
      if (features::IsOsLevelGeolocationPermissionSupportEnabled()) {
+diff --git a/chrome/browser/ui/views/side_panel/BUILD.gn b/chrome/browser/ui/views/side_panel/BUILD.gn
+index 474f5a179c..c9033ee480 100644
+--- a/chrome/browser/ui/views/side_panel/BUILD.gn
++++ b/chrome/browser/ui/views/side_panel/BUILD.gn
+@@ -29,6 +29,8 @@ source_set("side_panel") {
+     "reading_list/read_later_side_panel_web_view.h",
+     "reading_list/reading_list_side_panel_coordinator.cc",
+     "reading_list/reading_list_side_panel_coordinator.h",
++    "goatai_chat/goatai_chat_side_panel_web_view.cc",
++    "goatai_chat/goatai_chat_side_panel_web_view.h",
+     "side_panel.cc",
+     "side_panel.h",
+     "side_panel_animation_content_view.cc",
+@@ -130,6 +132,7 @@ source_set("side_panel") {
+     "//chrome/browser/ui/views/frame:themed_background",
+     "//chrome/browser/ui/views/interaction",
+     "//chrome/browser/ui/views/toolbar",
++    "//chrome/browser/ui/webui/goatai_chat",
+     "//chrome/browser/ui/webui:webui_util",
+     "//chrome/browser/ui/webui/side_panel/bookmarks",
+     "//chrome/browser/ui/webui/side_panel/comments",
+diff --git a/chrome/browser/ui/views/side_panel/goatai_chat/goatai_chat_side_panel_web_view.cc b/chrome/browser/ui/views/side_panel/goatai_chat/goatai_chat_side_panel_web_view.cc
+new file mode 100644
+index 0000000000..3966db97a5
+--- /dev/null
++++ b/chrome/browser/ui/views/side_panel/goatai_chat/goatai_chat_side_panel_web_view.cc
+@@ -0,0 +1,84 @@
++// Copyright 2026 Goatai. All rights reserved.
++// Use of this source code is governed by a BSD-style license.
++
++#include "chrome/browser/ui/views/side_panel/goatai_chat/goatai_chat_side_panel_web_view.h"
++
++#include <memory>
++
++#include "base/functional/bind.h"
++#include "base/functional/callback_helpers.h"
++#include "chrome/browser/profiles/profile.h"
++#include "chrome/browser/ui/browser_window/public/browser_window_interface.h"
++#include "chrome/browser/ui/side_panel/side_panel_entry.h"
++#include "chrome/browser/ui/side_panel/side_panel_enums.h"
++#include "chrome/browser/ui/side_panel/side_panel_registry.h"
++#include "chrome/browser/ui/side_panel/side_panel_ui.h"
++#include "chrome/browser/ui/webui/goatai_chat/goatai_chat_ui.h"
++#include "chrome/browser/ui/webui/webui_embedding_context.h"
++#include "extensions/browser/extension_registry.h"
++#include "extensions/common/extension.h"
++#include "chrome/common/webui_url_constants.h"
++#include "url/gurl.h"
++#include "ui/views/controls/webview/webview.h"
++
++namespace {
++
++GURL GoataiChatURL(Profile* profile) {
++  // Se a extensão Goatai IA estiver instalada, usa a página dela (APIs de
++  // extensão: storage.session, scripting, tabs). Senão, cai no WebUI nativo.
++  if (auto* registry = extensions::ExtensionRegistry::Get(profile)) {
++    for (const auto& extension : registry->enabled_extensions()) {
++      if (extension->name() == "Goatai IA") {
++        GURL url = extension->url().Resolve("panel.html");
++        if (url.is_valid()) {
++          return url;
++        }
++      }
++    }
++  }
++  return GURL(chrome::kChromeUIGoataiChatURL);
++}
++
++std::unique_ptr<views::View> CreateGoataiChatView(Profile* profile,
++                                                 SidePanelEntryScope& scope) {
++  auto web_view = std::make_unique<views::WebView>(profile);
++  web_view->LoadInitialURL(GoataiChatURL(profile));
++  if (web_view->web_contents()) {
++    // Permite ao backend descobrir a janela que hospeda o painel.
++    webui::SetBrowserWindowInterface(web_view->web_contents(),
++                                     &scope.GetBrowserWindowInterface());
++  }
++  return web_view;
++}
++
++}  // namespace
++
++void RegisterGoataiChatSidePanel(BrowserWindowInterface* browser,
++                                 Profile* profile) {
++  if (!browser || !profile) {
++    return;
++  }
++  SidePanelRegistry* registry = SidePanelRegistry::From(browser);
++  if (!registry) {
++    return;
++  }
++  const SidePanelEntryKey key(SidePanelEntry::Id::kGoataiChat);
++  if (registry->GetEntryForKey(key)) {
++    return;
++  }
++  registry->Register(std::make_unique<SidePanelEntry>(
++      key, base::BindRepeating(&CreateGoataiChatView, profile),
++      base::NullCallback()));
++}
++
++void ToggleGoataiChatSidePanel(BrowserWindowInterface* browser,
++                               Profile* profile) {
++  if (!browser || !profile) {
++    return;
++  }
++  RegisterGoataiChatSidePanel(browser, profile);
++  if (SidePanelUI* side_panel = SidePanelUI::From(browser)) {
++    side_panel->Toggle(SidePanelEntryKey(SidePanelEntry::Id::kGoataiChat),
++                       SidePanelOpenTrigger::kToolbarButton);
++  }
++}
+diff --git a/chrome/browser/ui/views/side_panel/goatai_chat/goatai_chat_side_panel_web_view.h b/chrome/browser/ui/views/side_panel/goatai_chat/goatai_chat_side_panel_web_view.h
+new file mode 100644
+index 0000000000..2acfdf2c21
+--- /dev/null
++++ b/chrome/browser/ui/views/side_panel/goatai_chat/goatai_chat_side_panel_web_view.h
+@@ -0,0 +1,18 @@
++// Copyright 2026 Goatai. All rights reserved.
++// Use of this source code is governed by a BSD-style license.
++
++#ifndef CHROME_BROWSER_UI_VIEWS_SIDE_PANEL_GOATAI_CHAT_GOATAI_CHAT_SIDE_PANEL_WEB_VIEW_H_
++#define CHROME_BROWSER_UI_VIEWS_SIDE_PANEL_GOATAI_CHAT_GOATAI_CHAT_SIDE_PANEL_WEB_VIEW_H_
++
++class BrowserWindowInterface;
++class Profile;
++
++// Registra o painel lateral direito do Goatai IA (idempotente).
++void RegisterGoataiChatSidePanel(BrowserWindowInterface* browser,
++                                 Profile* profile);
++
++// Registra (se necessário) e alterna o painel lateral direito do Goatai IA.
++void ToggleGoataiChatSidePanel(BrowserWindowInterface* browser,
++                               Profile* profile);
++
++#endif  // CHROME_BROWSER_UI_VIEWS_SIDE_PANEL_GOATAI_CHAT_GOATAI_CHAT_SIDE_PANEL_WEB_VIEW_H_
+diff --git a/chrome/browser/ui/views/side_panel/side_panel_coordinator.cc b/chrome/browser/ui/views/side_panel/side_panel_coordinator.cc
+index 40c8117733..f737b64301 100644
+--- a/chrome/browser/ui/views/side_panel/side_panel_coordinator.cc
++++ b/chrome/browser/ui/views/side_panel/side_panel_coordinator.cc
+@@ -74,6 +74,19 @@ void SidePanelCoordinator::ResetContentsWidthOverride() {
+ 
+ void SidePanelCoordinator::Toggle(SidePanelEntryKey key,
+                                   SidePanelOpenTrigger open_trigger) {
++  // Goatai IA: a ação da toolbar WebUI dispara o clique mais de uma vez
++  // (press/release). Ignora repetições muito próximas para o painel não
++  // abrir e fechar no mesmo clique.
++  if (key.id() == SidePanelEntryId::kGoataiChat) {
++    static base::TimeTicks last_goatai_toggle;
++    const base::TimeTicks now = base::TimeTicks::Now();
++    if (!last_goatai_toggle.is_null() &&
++        now - last_goatai_toggle < base::Milliseconds(500)) {
++      return;
++    }
++    last_goatai_toggle = now;
++  }
++
+   // If an entry is already showing in the sidepanel, the sidepanel
+   // should be closed.
+   SidePanel* side_panel = GetSidePanel();
 diff --git a/chrome/browser/ui/views/tabs/dragging/tab_drag_controller.cc b/chrome/browser/ui/views/tabs/dragging/tab_drag_controller.cc
 index 04187c49e6..1b06e7e6ac 100644
 --- a/chrome/browser/ui/views/tabs/dragging/tab_drag_controller.cc
@@ -18410,6 +19244,1479 @@ index 63bf787706..31f13e5ef0 100644
  }
  
  int TabStripControlButton::GetFlatCornerRadius() const {
+diff --git a/chrome/browser/ui/views/toolbar/toolbar_view.cc b/chrome/browser/ui/views/toolbar/toolbar_view.cc
+index 6c8c3d3fb1..8cda4d2d70 100644
+--- a/chrome/browser/ui/views/toolbar/toolbar_view.cc
++++ b/chrome/browser/ui/views/toolbar/toolbar_view.cc
+@@ -52,6 +52,7 @@
+ #include "chrome/browser/ui/browser_window.h"
+ #include "chrome/browser/ui/browser_window/public/browser_window_features.h"
+ #include "chrome/browser/ui/browser_window/public/browser_window_interface.h"
++#include "chrome/app/vector_icons/vector_icons.h"
+ #include "chrome/browser/ui/color/chrome_color_id.h"
+ #include "chrome/browser/ui/global_error/global_error.h"
+ #include "chrome/browser/ui/global_error/global_error_service.h"
+@@ -90,6 +91,7 @@
+ #include "chrome/browser/ui/views/performance_controls/battery_saver_button.h"
+ #include "chrome/browser/ui/views/performance_controls/performance_intervention_button.h"
+ #include "chrome/browser/ui/views/profiles/avatar_toolbar_button.h"
++#include "chrome/browser/ui/views/side_panel/goatai_chat/goatai_chat_side_panel_web_view.h"
+ #include "chrome/browser/ui/views/side_panel/side_panel.h"
+ #include "chrome/browser/ui/views/tabs/glic/glic_and_actor_buttons_container.h"
+ #include "chrome/browser/ui/views/tabs/tab_strip.h"
+@@ -602,6 +604,21 @@ void ToolbarView::Init() {
+     UpdateGlicButtonVisibility();
+   }
+ 
++  // Switch de desenvolvimento/teste: abre o painel no startup.
++  if (base::CommandLine::ForCurrentProcess()->HasSwitch("goatai-open-chat")) {
++    base::SingleThreadTaskRunner::GetCurrentDefault()->PostDelayedTask(
++        FROM_HERE,
++        base::BindOnce(
++            [](ToolbarView* view) {
++              if (view->browser_view_ && view->browser_) {
++                ToggleGoataiChatSidePanel(view->browser_view_->browser(),
++                                          view->browser_->GetProfile());
++              }
++            },
++            base::Unretained(this)),
++        base::Seconds(1));
++  }
++
+   if (!features::IsWebUIAvatarButtonEnabled()) {
+     avatar_ = AddChildView(std::make_unique<AvatarToolbarButton>(browser_));
+     bool show_avatar_toolbar_button =
+diff --git a/chrome/browser/ui/webui/BUILD.gn b/chrome/browser/ui/webui/BUILD.gn
+index 69bbe48a8f..122b416f34 100644
+--- a/chrome/browser/ui/webui/BUILD.gn
++++ b/chrome/browser/ui/webui/BUILD.gn
+@@ -67,6 +67,7 @@ source_set("configs") {
+     "//chrome/browser/ui/webui/crashes",
+     "//chrome/browser/ui/webui/data_sharing_internals",
+     "//chrome/browser/ui/webui/device_log",
++    "//chrome/browser/ui/webui/goatai_chat",
+     "//chrome/browser/ui/webui/download_internals",
+     "//chrome/browser/ui/webui/engagement",
+     "//chrome/browser/ui/webui/family_link_user_internals",
+diff --git a/chrome/browser/ui/webui/chrome_web_ui_configs.cc b/chrome/browser/ui/webui/chrome_web_ui_configs.cc
+index 85d248f624..927fea6d6a 100644
+--- a/chrome/browser/ui/webui/chrome_web_ui_configs.cc
++++ b/chrome/browser/ui/webui/chrome_web_ui_configs.cc
+@@ -58,6 +58,7 @@
+ #include "chrome/browser/ui/webui/sync_internals/sync_internals_ui.h"
+ #include "chrome/browser/ui/webui/translate_internals/translate_internals_ui.h"
+ #include "chrome/browser/ui/webui/usb_internals/usb_internals_ui.h"
++#include "chrome/browser/ui/webui/goatai_chat/goatai_chat_ui.h"
+ #include "chrome/browser/ui/webui/version/version_ui.h"
+ #include "components/enterprise/buildflags/buildflags.h"
+ #include "components/on_device_translation/buildflags/buildflags.h"
+@@ -328,6 +329,7 @@ void RegisterChromeWebUIConfigs() {
+   map.AddWebUIConfig(std::make_unique<TranslateInternalsUIConfig>());
+   map.AddWebUIConfig(std::make_unique<UsbInternalsUIConfig>());
+   map.AddWebUIConfig(std::make_unique<user_actions_ui::UserActionsUIConfig>());
++  map.AddWebUIConfig(std::make_unique<GoataiChatUIConfig>());
+   map.AddWebUIConfig(std::make_unique<VersionUIConfig>());
+   map.AddWebUIConfig(std::make_unique<WebRtcLogsUIConfig>());
+   map.AddWebUIConfig(std::make_unique<RegionalCapabilitiesInternalsUIConfig>());
+diff --git a/chrome/browser/ui/webui/goatai_chat/BUILD.gn b/chrome/browser/ui/webui/goatai_chat/BUILD.gn
+new file mode 100644
+index 0000000000..63b5f48660
+--- /dev/null
++++ b/chrome/browser/ui/webui/goatai_chat/BUILD.gn
+@@ -0,0 +1,35 @@
++# Copyright 2026 Goatai. All rights reserved.
++# Use of this source code is governed by a BSD-style license.
++
++source_set("goatai_chat") {
++  sources = [
++    "goatai_chat_handler.cc",
++    "goatai_chat_handler.h",
++    "goatai_chat_prefs.h",
++    "goatai_chat_ui.cc",
++    "goatai_chat_ui.h",
++  ]
++
++  public_deps = [
++    "//base",
++    "//chrome/browser:resources",
++    "//chrome/common",
++    "//content/public/browser",
++  ]
++
++  deps = [
++    "//chrome/browser:browser_process",
++    "//chrome/browser/profiles:profile",
++    "//chrome/browser/ui/browser_window",
++    "//chrome/browser/ui/navigator",
++    "//chrome/browser/ui/tabs:tab_strip",
++    "//chrome/browser/ui/webui:webui_util",
++    "//components/os_crypt/async/browser",
++    "//components/os_crypt/async/common",
++    "//components/prefs",
++    "//net",
++    "//services/network/public/cpp",
++    "//services/network/public/mojom",
++    "//ui/base",
++  ]
++}
+diff --git a/chrome/browser/ui/webui/goatai_chat/goatai_chat_handler.cc b/chrome/browser/ui/webui/goatai_chat/goatai_chat_handler.cc
+new file mode 100644
+index 0000000000..1169552e15
+--- /dev/null
++++ b/chrome/browser/ui/webui/goatai_chat/goatai_chat_handler.cc
+@@ -0,0 +1,1120 @@
++// Copyright 2026 Goatai. All rights reserved.
++// Use of this source code is governed by a BSD-style license.
++
++#include "chrome/browser/ui/webui/goatai_chat/goatai_chat_handler.h"
++
++#include <optional>
++#include <string>
++#include <utility>
++#include <vector>
++
++#include "base/base64.h"
++#include "base/functional/bind.h"
++#include "base/json/json_reader.h"
++#include "base/json/json_writer.h"
++#include "base/memory/scoped_refptr.h"
++#include "base/strings/strcat.h"
++#include "base/strings/string_number_conversions.h"
++#include "base/time/time.h"
++#include "base/strings/utf_string_conversions.h"
++#include "base/values.h"
++#include "chrome/browser/browser_process.h"
++#include "chrome/browser/profiles/profile.h"
++#include "chrome/browser/ui/browser_window/public/browser_window_interface.h"
++#include "chrome/browser/ui/browser_window/public/browser_window_interface_iterator.h"
++#include "chrome/browser/ui/navigator/browser_navigator.h"
++#include "chrome/browser/ui/navigator/browser_navigator_params.h"
++#include "chrome/browser/ui/tabs/tab_enums.h"
++#include "chrome/browser/ui/tabs/tab_strip_model.h"
++#include "chrome/browser/ui/webui/goatai_chat/goatai_chat_prefs.h"
++#include "chrome/browser/ui/webui/webui_embedding_context.h"
++#include "components/os_crypt/async/browser/os_crypt_async.h"
++#include "components/prefs/pref_service.h"
++#include "content/public/browser/navigation_controller.h"
++#include "content/public/browser/reload_type.h"
++#include "content/public/browser/render_frame_host.h"
++#include "content/public/browser/web_contents.h"
++#include "content/public/browser/web_ui.h"
++#include "content/public/common/isolated_world_ids.h"
++#include "net/base/net_errors.h"
++#include "net/http/http_response_headers.h"
++#include "net/traffic_annotation/network_traffic_annotation.h"
++#include "services/network/public/cpp/resource_request.h"
++#include "services/network/public/cpp/simple_url_loader.h"
++#include "services/network/public/mojom/url_response_head.mojom.h"
++#include "ui/base/page_transition_types.h"
++#include "ui/base/window_open_disposition.h"
++
++namespace {
++
++constexpr int kMaxSteps = 8;
++constexpr size_t kMaxResponseBytes = 8 * 1024 * 1024;
++constexpr char kRoleUser[] = "user";
++constexpr char kRoleAssistant[] = "assistant";
++
++constexpr net::NetworkTrafficAnnotationTag kTrafficAnnotation =
++    net::DefineNetworkTrafficAnnotation("goatai_chat", R"(
++        semantics {
++          sender: "Goatai IA"
++          description: "Envia as mensagens do painel de IA para o provedor
++              escolhido pelo usuário (OpenAI, Google, DeepSeek ou Anthropic)."
++          trigger: "O usuário envia uma mensagem no painel Goatai IA."
++          data: "Texto da conversa e a chave de API do provedor configurada."
++          destination: WEBSITE
++        }
++        policy {
++          cookies: "Não envia nem lê cookies."
++          settings: "Somente usuários que configuraram uma chave no painel."
++        })");
++
++std::string DictToJson(const base::DictValue& dict) {
++  std::string json;
++  base::JSONWriter::Write(dict, &json);
++  return json;
++}
++
++std::string StringToJson(const std::string& value) {
++  std::string json;
++  base::JSONWriter::Write(base::Value(value), &json);
++  return json;
++}
++
++std::string StringArg(const base::DictValue* args, const char* key) {
++  if (!args) {
++    return std::string();
++  }
++  const std::string* value = args->FindString(key);
++  return value ? *value : std::string();
++}
++
++int IntArg(const base::DictValue* args, const char* key, int fallback) {
++  if (!args) {
++    return fallback;
++  }
++  return args->FindInt(key).value_or(fallback);
++}
++
++bool BoolArg(const base::DictValue* args, const char* key) {
++  if (!args) {
++    return false;
++  }
++  return args->FindBool(key).value_or(false);
++}
++
++std::string ExtractError(const std::string& body) {
++  auto dict = base::JSONReader::ReadDict(body, base::JSON_PARSE_RFC);
++  if (dict) {
++    const base::Value* error = dict->Find("error");
++    if (error) {
++      if (error->is_dict()) {
++        const std::string* message = error->GetDict().FindString("message");
++        if (message && !message->empty()) {
++          return *message;
++        }
++      } else if (error->is_string()) {
++        return error->GetString();
++      }
++    }
++    const std::string* message = dict->FindString("message");
++    if (message && !message->empty()) {
++      return *message;
++    }
++  }
++  if (body.empty()) {
++    return "resposta vazia do provedor";
++  }
++  return body.substr(0, 300);
++}
++
++std::string ExtractText(const std::string& provider,
++                        const base::DictValue& dict) {
++  if (provider == "claude") {
++    const base::ListValue* content = dict.FindList("content");
++    if (!content) {
++      return std::string();
++    }
++    std::string text;
++    for (const base::Value& item : *content) {
++      if (!item.is_dict()) {
++        continue;
++      }
++      const base::DictValue& block = item.GetDict();
++      const std::string* type = block.FindString("type");
++      if (type && *type == "text") {
++        const std::string* piece = block.FindString("text");
++        if (piece) {
++          text += *piece;
++        }
++      }
++    }
++    return text;
++  }
++
++  if (provider == "gemini") {
++    const base::ListValue* candidates = dict.FindList("candidates");
++    if (!candidates || candidates->empty()) {
++      return std::string();
++    }
++    const base::DictValue* candidate = (*candidates)[0].GetIfDict();
++    if (!candidate) {
++      return std::string();
++    }
++    const base::DictValue* content = candidate->FindDict("content");
++    if (!content) {
++      return std::string();
++    }
++    const base::ListValue* parts = content->FindList("parts");
++    if (!parts) {
++      return std::string();
++    }
++    std::string text;
++    for (const base::Value& part : *parts) {
++      if (!part.is_dict()) {
++        continue;
++      }
++      const std::string* piece = part.GetDict().FindString("text");
++      if (piece) {
++        text += *piece;
++      }
++    }
++    return text;
++  }
++
++  // OpenAI / DeepSeek.
++  const base::ListValue* choices = dict.FindList("choices");
++  if (!choices || choices->empty()) {
++    return std::string();
++  }
++  const base::DictValue* choice = (*choices)[0].GetIfDict();
++  if (!choice) {
++    return std::string();
++  }
++  const base::DictValue* message = choice->FindDict("message");
++  if (!message) {
++    return std::string();
++  }
++  const std::string* content = message->FindString("content");
++  return content ? *content : std::string();
++}
++
++base::DictValue RoleContent(const std::string& role,
++                              const std::string& content) {
++  base::DictValue message;
++  message.Set("role", role);
++  message.Set("content", content);
++  return message;
++}
++
++base::DictValue GeminiPart(const std::string& text) {
++  base::DictValue part;
++  part.Set("text", text);
++  return part;
++}
++
++}  // namespace
++
++GoataiChatHandler::GoataiChatHandler() = default;
++GoataiChatHandler::~GoataiChatHandler() = default;
++
++void GoataiChatHandler::RegisterMessages() {
++  web_ui()->RegisterMessageCallback(
++      "goatai.getState",
++      base::BindRepeating(&GoataiChatHandler::HandleGetState,
++                          base::Unretained(this)));
++  web_ui()->RegisterMessageCallback(
++      "goatai.setProvider",
++      base::BindRepeating(&GoataiChatHandler::HandleSetProvider,
++                          base::Unretained(this)));
++  web_ui()->RegisterMessageCallback(
++      "goatai.setModel",
++      base::BindRepeating(&GoataiChatHandler::HandleSetModel,
++                          base::Unretained(this)));
++  web_ui()->RegisterMessageCallback(
++      "goatai.setControl",
++      base::BindRepeating(&GoataiChatHandler::HandleSetControl,
++                          base::Unretained(this)));
++  web_ui()->RegisterMessageCallback(
++      "goatai.saveKey",
++      base::BindRepeating(&GoataiChatHandler::HandleSaveKey,
++                          base::Unretained(this)));
++  web_ui()->RegisterMessageCallback(
++      "goatai.clearKey",
++      base::BindRepeating(&GoataiChatHandler::HandleClearKey,
++                          base::Unretained(this)));
++  web_ui()->RegisterMessageCallback(
++      "goatai.send", base::BindRepeating(&GoataiChatHandler::HandleSend,
++                                         base::Unretained(this)));
++
++  PrefService* service = prefs();
++  if (service) {
++    const std::string stored = service->GetString(goatai::kChatProviderPref);
++    if (IsValidProvider(stored)) {
++      provider_ = stored;
++    }
++    control_enabled_ = service->GetBoolean(goatai::kChatControlPref);
++  }
++}
++
++void GoataiChatHandler::OnJavascriptAllowed() {
++  EnsureEncryptor(base::BindOnce(
++      [](base::WeakPtr<GoataiChatHandler> self, bool /*ok*/) {
++        if (self) {
++          self->SendState();
++        }
++      },
++      weak_factory_.GetWeakPtr()));
++  SendState();
++}
++
++void GoataiChatHandler::OnJavascriptDisallowed() {
++  weak_factory_.InvalidateWeakPtrs();
++}
++
++content::WebUI* GoataiChatHandler::ui() const {
++  return const_cast<GoataiChatHandler*>(this)->web_ui();
++}
++
++Profile* GoataiChatHandler::profile() const {
++  content::WebUI* web_ui_ptr = ui();
++  return web_ui_ptr ? Profile::FromWebUI(web_ui_ptr) : nullptr;
++}
++
++PrefService* GoataiChatHandler::prefs() const {
++  Profile* p = profile();
++  return p ? p->GetPrefs() : nullptr;
++}
++
++bool GoataiChatHandler::IsValidProvider(const std::string& provider) const {
++  return provider == "gpt" || provider == "gemini" ||
++         provider == "deepseek" || provider == "claude";
++}
++
++std::string GoataiChatHandler::Provider() const {
++  return provider_;
++}
++
++std::string GoataiChatHandler::DefaultModelFor(
++    const std::string& provider) const {
++  if (provider == "gpt") {
++    return "gpt-4.1-mini";
++  }
++  if (provider == "gemini") {
++    return "gemini-2.5-flash";
++  }
++  if (provider == "deepseek") {
++    return "deepseek-chat";
++  }
++  if (provider == "claude") {
++    return "claude-sonnet-4-5";
++  }
++  return std::string();
++}
++
++std::string GoataiChatHandler::Model() const {
++  PrefService* service = prefs();
++  if (service) {
++    const std::string stored =
++        service->GetString(ModelPrefFor(provider_));
++    if (!stored.empty()) {
++      return stored;
++    }
++  }
++  return DefaultModelFor(provider_);
++}
++
++std::string GoataiChatHandler::KeyPrefFor(const std::string& provider) const {
++  return base::StrCat({goatai::kChatKeyPrefPrefix, provider});
++}
++
++std::string GoataiChatHandler::ModelPrefFor(
++    const std::string& provider) const {
++  return base::StrCat({goatai::kChatModelPrefPrefix, provider});
++}
++
++std::string GoataiChatHandler::StoredKeyPref(
++    const std::string& provider) const {
++  PrefService* service = prefs();
++  return service ? service->GetString(KeyPrefFor(provider)) : std::string();
++}
++
++void GoataiChatHandler::EnsureEncryptor(
++    base::OnceCallback<void(bool)> callback) {
++  if (encryptor_) {
++    std::move(callback).Run(true);
++    return;
++  }
++  os_crypt_async::OSCryptAsync* os_crypt =
++      g_browser_process ? g_browser_process->os_crypt_async() : nullptr;
++  if (!os_crypt) {
++    std::move(callback).Run(false);
++    return;
++  }
++  os_crypt->GetInstance(base::BindOnce(
++      [](base::WeakPtr<GoataiChatHandler> self,
++         base::OnceCallback<void(bool)> callback,
++         scoped_refptr<os_crypt_async::Encryptor> encryptor) {
++        if (!self) {
++          std::move(callback).Run(false);
++          return;
++        }
++        self->encryptor_ = std::move(encryptor);
++        std::move(callback).Run(self->encryptor_ != nullptr);
++      },
++      weak_factory_.GetWeakPtr(), std::move(callback)));
++}
++
++std::string GoataiChatHandler::DecryptStoredKey(
++    const std::string& provider) const {
++  if (!encryptor_) {
++    return std::string();
++  }
++  const std::string stored = StoredKeyPref(provider);
++  if (stored.empty()) {
++    return std::string();
++  }
++  std::string cipher;
++  if (!base::Base64Decode(stored, &cipher)) {
++    return std::string();
++  }
++  std::string plain;
++  if (!encryptor_->DecryptString(cipher, &plain)) {
++    return std::string();
++  }
++  return plain;
++}
++
++std::string GoataiChatHandler::MaskKey(const std::string& key) const {
++  if (key.size() <= 4) {
++    return "****";
++  }
++  return base::StrCat({"••••", key.substr(key.size() - 4)});
++}
++
++void GoataiChatHandler::Notify(base::DictValue event) {
++  if (!IsJavascriptAllowed()) {
++    return;
++  }
++  CallJavascriptFunction("goataiChatEvent", base::Value(DictToJson(event)));
++}
++
++void GoataiChatHandler::NotifyError(const std::string& message) {
++  base::DictValue event;
++  event.Set("type", "error");
++  event.Set("message", message);
++  Notify(std::move(event));
++  waiting_ = false;
++}
++
++void GoataiChatHandler::NotifyStatus(const std::string& text) {
++  base::DictValue event;
++  event.Set("type", "status");
++  event.Set("text", text);
++  Notify(std::move(event));
++}
++
++void GoataiChatHandler::NotifyAction(const std::string& text) {
++  base::DictValue event;
++  event.Set("type", "action");
++  event.Set("text", text);
++  Notify(std::move(event));
++}
++
++void GoataiChatHandler::SendState() {
++  if (!IsJavascriptAllowed()) {
++    return;
++  }
++  const std::string key = DecryptStoredKey(provider_);
++  base::DictValue event;
++  event.Set("type", "state");
++  event.Set("provider", provider_);
++  event.Set("model", Model());
++  event.Set("control", control_enabled_);
++  event.Set("hasKey", !StoredKeyPref(provider_).empty());
++  event.Set("masked", key.empty() ? std::string() : MaskKey(key));
++  Notify(std::move(event));
++}
++
++void GoataiChatHandler::HandleGetState(const base::ListValue& args) {
++  if (!encryptor_) {
++    EnsureEncryptor(base::BindOnce(
++        [](base::WeakPtr<GoataiChatHandler> self, bool /*ok*/) {
++          if (self) {
++            self->SendState();
++          }
++        },
++        weak_factory_.GetWeakPtr()));
++  }
++  SendState();
++}
++
++void GoataiChatHandler::HandleSetProvider(const base::ListValue& args) {
++  if (args.empty() || !args[0].is_string()) {
++    return;
++  }
++  const std::string provider = args[0].GetString();
++  if (!IsValidProvider(provider)) {
++    return;
++  }
++  provider_ = provider;
++  messages_.clear();
++  if (PrefService* service = prefs()) {
++    service->SetString(goatai::kChatProviderPref, provider_);
++  }
++  SendState();
++}
++
++void GoataiChatHandler::HandleSetModel(const base::ListValue& args) {
++  if (args.empty() || !args[0].is_string()) {
++    return;
++  }
++  const std::string model = args[0].GetString();
++  if (PrefService* service = prefs()) {
++    service->SetString(ModelPrefFor(provider_), model);
++  }
++  SendState();
++}
++
++void GoataiChatHandler::HandleSetControl(const base::ListValue& args) {
++  if (args.empty() || !args[0].is_bool()) {
++    return;
++  }
++  control_enabled_ = args[0].GetBool();
++  if (PrefService* service = prefs()) {
++    service->SetBoolean(goatai::kChatControlPref, control_enabled_);
++  }
++  SendState();
++}
++
++void GoataiChatHandler::HandleSaveKey(const base::ListValue& args) {
++  if (args.size() < 2 || !args[0].is_string() || !args[1].is_string()) {
++    return;
++  }
++  const std::string provider = args[0].GetString();
++  const std::string key = args[1].GetString();
++  if (!IsValidProvider(provider) || key.empty()) {
++    return;
++  }
++  EnsureEncryptor(base::BindOnce(
++      [](base::WeakPtr<GoataiChatHandler> self, std::string provider,
++         std::string key, bool ok) {
++        if (!self) {
++          return;
++        }
++        if (!ok || !self->encryptor_) {
++          self->NotifyError(
++              "Não foi possível acessar o cofre do sistema para cifrar a "
++              "chave.");
++          return;
++        }
++        std::string cipher;
++        if (!self->encryptor_->EncryptString(key, &cipher)) {
++          self->NotifyError("Falha ao cifrar a chave de API.");
++          return;
++        }
++        if (PrefService* service = self->prefs()) {
++          service->SetString(self->KeyPrefFor(provider),
++                             base::Base64Encode(cipher));
++        }
++        if (provider == self->provider_) {
++          self->messages_.clear();
++        }
++        self->SendState();
++      },
++      weak_factory_.GetWeakPtr(), provider, key));
++}
++
++void GoataiChatHandler::HandleClearKey(const base::ListValue& args) {
++  if (args.empty() || !args[0].is_string()) {
++    return;
++  }
++  const std::string provider = args[0].GetString();
++  if (!IsValidProvider(provider)) {
++    return;
++  }
++  if (PrefService* service = prefs()) {
++    service->ClearPref(KeyPrefFor(provider));
++  }
++  messages_.clear();
++  SendState();
++}
++
++void GoataiChatHandler::HandleSend(const base::ListValue& args) {
++  if (args.empty() || !args[0].is_string() || waiting_) {
++    return;
++  }
++  const std::string prompt = args[0].GetString();
++  if (prompt.empty()) {
++    return;
++  }
++  if (StoredKeyPref(provider_).empty()) {
++    NotifyError("Configure a chave de API do provedor antes de conversar.");
++    return;
++  }
++  messages_.push_back({kRoleUser, prompt});
++  waiting_ = true;
++  EnsureEncryptor(base::BindOnce(
++      [](base::WeakPtr<GoataiChatHandler> self, int step, bool ok) {
++        if (!self) {
++          return;
++        }
++        if (!ok) {
++          self->NotifyError("Cofre do sistema indisponível.");
++          return;
++        }
++        self->SendStep(step);
++      },
++      weak_factory_.GetWeakPtr(), 0));
++}
++
++std::string GoataiChatHandler::BuildSystemPrompt() const {
++  std::string prompt =
++      "Você é o Goatai IA, um assistente dentro do navegador Goatai. "
++      "Responda em português do Brasil, de forma direta e útil. ";
++  prompt +=
++      "Nunca invente o resultado de uma ação; se precisar de dados da página, "
++      "use uma ação de leitura. ";
++  if (!control_enabled_) {
++    prompt +=
++        "O controle do navegador está DESATIVADO. Apenas converse; não emita "
++        "ações.";
++    return prompt;
++  }
++  prompt +=
++      "Você pode controlar o navegador. Quando precisar executar uma ação, "
++      "responda SOMENTE com um JSON válido, sem markdown e sem texto em volta, "
++      "no formato {\"action\":\"nome\",\"args\":{...}}. "
++      "Use no máximo uma ação por resposta. Depois de cada ação você receberá "
++      "uma mensagem 'Resultado da ação: ...'. Quando terminar, responda em "
++      "texto normal (sem JSON). Ações disponíveis:\n"
++      "- open_tab {\"url\":\"https://...\"}\n"
++      "- list_tabs {}\n"
++      "- switch_tab {\"index\":0}\n"
++      "- close_tab {\"index\":0}\n"
++      "- navigate {\"url\":\"https://...\"} (aba ativa)\n"
++      "- back {}\n- forward {}\n- reload {}\n"
++      "- read_page {} (texto visível da aba ativa)\n"
++      "- click {\"selector\":\"...\"} ou {\"text\":\"...\"}\n"
++      "- type {\"selector\":\"...\",\"text\":\"...\",\"submit\":false}\n"
++      "- scroll {\"direction\":\"down\"} ou {\"direction\":\"up\"}\n";
++  return prompt;
++}
++
++void GoataiChatHandler::AddContextToSystem(std::string* system) const {
++  BrowserWindowInterface* browser = GetBrowserWindow();
++  if (!browser || !browser->GetTabStripModel()) {
++    return;
++  }
++  content::WebContents* contents =
++      browser->GetTabStripModel()->GetActiveWebContents();
++  if (!contents) {
++    return;
++  }
++  system->append("\nContexto atual: aba ativa \"");
++  system->append(base::UTF16ToUTF8(contents->GetTitle()));
++  system->append("\" em ");
++  system->append(contents->GetLastCommittedURL().possibly_invalid_spec());
++  system->append(".");
++}
++
++std::string GoataiChatHandler::BuildRequestBody() const {
++  const std::string model = Model();
++  std::string system = BuildSystemPrompt();
++  AddContextToSystem(&system);
++
++  base::DictValue body;
++  if (provider_ == "claude") {
++    body.Set("model", model);
++    body.Set("max_tokens", 2048);
++    body.Set("system", system);
++    base::ListValue list;
++    for (const ChatMessage& message : messages_) {
++      list.Append(RoleContent(message.role, message.content));
++    }
++    body.Set("messages", std::move(list));
++    return DictToJson(body);
++  }
++
++  if (provider_ == "gemini") {
++    base::DictValue system_instruction;
++    base::ListValue system_parts;
++    system_parts.Append(GeminiPart(system));
++    system_instruction.Set("parts", std::move(system_parts));
++    body.Set("systemInstruction", std::move(system_instruction));
++
++    base::ListValue contents;
++    for (const ChatMessage& message : messages_) {
++      base::DictValue content;
++      content.Set("role", message.role == kRoleAssistant ? "model" : "user");
++      base::ListValue parts;
++      parts.Append(GeminiPart(message.content));
++      content.Set("parts", std::move(parts));
++      contents.Append(std::move(content));
++    }
++    body.Set("contents", std::move(contents));
++
++    base::DictValue generation;
++    generation.Set("maxOutputTokens", 2048);
++    body.Set("generationConfig", std::move(generation));
++    return DictToJson(body);
++  }
++
++  // OpenAI e DeepSeek (API compatível).
++  base::ListValue list;
++  list.Append(RoleContent("system", system));
++  for (const ChatMessage& message : messages_) {
++    list.Append(RoleContent(message.role, message.content));
++  }
++  body.Set("model", model);
++  body.Set("messages", std::move(list));
++  body.Set("temperature", 0.7);
++  return DictToJson(body);
++}
++
++void GoataiChatHandler::SendStep(int step) {
++  if (!encryptor_) {
++    NotifyError("Cofre do sistema indisponível.");
++    return;
++  }
++  const std::string key = DecryptStoredKey(provider_);
++  if (key.empty()) {
++    NotifyError("Chave de API ausente ou ilegível. Salve a chave novamente.");
++    return;
++  }
++  if (step >= kMaxSteps) {
++    messages_.push_back(
++        {kRoleAssistant, "Limite de ações atingido nesta rodada."});
++    base::DictValue event;
++    event.Set("type", "reply");
++    event.Set("text", "Limite de ações atingido nesta rodada.");
++    Notify(std::move(event));
++    waiting_ = false;
++    return;
++  }
++
++  NotifyStatus(base::StrCat({"Consultando ", provider_, "…"}));
++
++  const std::string model = Model();
++  GURL endpoint;
++  if (provider_ == "gpt") {
++    endpoint = GURL("https://api.openai.com/v1/chat/completions");
++  } else if (provider_ == "deepseek") {
++    endpoint = GURL("https://api.deepseek.com/chat/completions");
++  } else if (provider_ == "claude") {
++    endpoint = GURL("https://api.anthropic.com/v1/messages");
++  } else if (provider_ == "gemini") {
++    endpoint = GURL("https://generativelanguage.googleapis.com/v1beta/models/" +
++                    model + ":generateContent");
++  }
++  if (!endpoint.is_valid()) {
++    NotifyError("URL do provedor inválida.");
++    return;
++  }
++
++  auto request = std::make_unique<network::ResourceRequest>();
++  request->method = "POST";
++  request->url = endpoint;
++  request->credentials_mode = network::mojom::CredentialsMode::kOmit;
++  request->headers.SetHeader("Content-Type", "application/json");
++  request->headers.SetHeader("Accept", "application/json");
++  if (provider_ == "claude") {
++    request->headers.SetHeader("x-api-key", key);
++    request->headers.SetHeader("anthropic-version", "2023-06-01");
++  } else if (provider_ == "gemini") {
++    request->headers.SetHeader("x-goog-api-key", key);
++  } else {
++    request->headers.SetHeader("Authorization", base::StrCat({"Bearer ", key}));
++  }
++
++  loader_ = network::SimpleURLLoader::Create(std::move(request),
++                                             kTrafficAnnotation);
++  loader_->SetAllowHttpErrorResults(true);
++  loader_->SetTimeoutDuration(base::Seconds(120));
++  loader_->DownloadToString(
++      profile()->GetURLLoaderFactory().get(),
++      base::BindOnce(&GoataiChatHandler::OnProviderResponse,
++                     weak_factory_.GetWeakPtr(), step),
++      kMaxResponseBytes);
++}
++
++void GoataiChatHandler::OnProviderResponse(int step,
++                                           std::optional<std::string> body) {
++  const int net_error = loader_ ? loader_->NetError() : net::ERR_FAILED;
++  int response_code = 0;
++  if (loader_ && loader_->ResponseInfo() &&
++      loader_->ResponseInfo()->headers) {
++    response_code = loader_->ResponseInfo()->headers->response_code();
++  }
++  loader_.reset();
++
++  if (net_error != net::OK || !body.has_value()) {
++    NotifyError(base::StrCat(
++        {"Falha de rede ao falar com o provedor (",
++         net::ErrorToString(net_error), ")."}));
++    return;
++  }
++
++  if (response_code >= 400) {
++    NotifyError(base::StrCat({"Erro do provedor (HTTP ",
++                              base::NumberToString(response_code), "): ",
++                              ExtractError(*body)}));
++    return;
++  }
++
++  auto dict = base::JSONReader::ReadDict(*body, base::JSON_PARSE_RFC);
++  if (!dict) {
++    NotifyError("Resposta do provedor não é JSON válido.");
++    return;
++  }
++
++  std::string text;
++  if (provider_ == "claude") {
++    text = ExtractText(provider_, *dict);
++  } else if (provider_ == "gemini") {
++    text = ExtractText(provider_, *dict);
++  } else {
++    text = ExtractText(provider_, *dict);
++  }
++  if (text.empty()) {
++    NotifyError("O provedor não retornou texto. Verifique o modelo escolhido.");
++    return;
++  }
++
++  HandleModelText(step, text);
++}
++
++void GoataiChatHandler::HandleModelText(int step, const std::string& text) {
++  std::optional<base::DictValue> action = ParseAction(text);
++  if (action && control_enabled_) {
++    const std::string action_name =
++        action->FindString("action") ? *action->FindString("action") : "";
++    const base::DictValue* args = action->FindDict("args");
++    messages_.push_back({kRoleAssistant, text});
++    NotifyAction(base::StrCat({"▶ ", action_name}));
++    ExecuteAction(
++        action_name, args,
++        base::BindOnce(
++            [](base::WeakPtr<GoataiChatHandler> self, int step,
++               std::string result) {
++              if (!self) {
++                return;
++              }
++              self->messages_.push_back(
++                  {kRoleUser, base::StrCat({"Resultado da ação: ", result})});
++              self->SendStep(step + 1);
++            },
++            weak_factory_.GetWeakPtr(), step));
++    return;
++  }
++
++  messages_.push_back({kRoleAssistant, text});
++  base::DictValue event;
++  event.Set("type", "reply");
++  event.Set("text", text);
++  Notify(std::move(event));
++  waiting_ = false;
++}
++
++std::optional<base::DictValue> GoataiChatHandler::ParseAction(
++    const std::string& text) const {
++  std::string candidate = text;
++  const size_t fence = candidate.find("```");
++  if (fence != std::string::npos) {
++    const size_t fence_end = candidate.find("```", fence + 3);
++    if (fence_end != std::string::npos) {
++      candidate = candidate.substr(fence + 3, fence_end - fence - 3);
++    }
++  }
++  const size_t start = candidate.find('{');
++  const size_t end = candidate.rfind('}');
++  if (start == std::string::npos || end == std::string::npos || end <= start) {
++    return std::nullopt;
++  }
++  auto dict = base::JSONReader::ReadDict(
++      candidate.substr(start, end - start + 1), base::JSON_PARSE_RFC);
++  if (!dict) {
++    return std::nullopt;
++  }
++  const std::string* action = dict->FindString("action");
++  if (!action) {
++    return std::nullopt;
++  }
++  static const char* const kAllowed[] = {
++      "open_tab", "list_tabs", "switch_tab", "close_tab", "navigate",
++      "back",     "forward",   "reload",     "read_page",  "click",
++      "type",     "scroll",
++  };
++  for (const char* allowed : kAllowed) {
++    if (*action == allowed) {
++      return dict;
++    }
++  }
++  return std::nullopt;
++}
++
++BrowserWindowInterface* GoataiChatHandler::GetBrowserWindow() const {
++  content::WebUI* web_ui_ptr = ui();
++  if (!web_ui_ptr || !web_ui_ptr->GetWebContents()) {
++    return nullptr;
++  }
++  BrowserWindowInterface* browser =
++      webui::GetBrowserWindowInterface(web_ui_ptr->GetWebContents());
++  if (browser) {
++    return browser;
++  }
++  return GetLastActiveBrowserWindowInterfaceWithAnyProfile();
++}
++
++content::WebContents* GoataiChatHandler::GetActiveWebContents() const {
++  BrowserWindowInterface* browser = GetBrowserWindow();
++  if (!browser || !browser->GetTabStripModel()) {
++    return nullptr;
++  }
++  return browser->GetTabStripModel()->GetActiveWebContents();
++}
++
++void GoataiChatHandler::ExecuteAction(
++    const std::string& action,
++    const base::DictValue* args,
++    base::OnceCallback<void(std::string)> callback) {
++  BrowserWindowInterface* browser = GetBrowserWindow();
++  if (!browser || !browser->GetTabStripModel()) {
++    std::move(callback).Run("{\"ok\":false,\"error\":\"sem janela ativa\"}");
++    return;
++  }
++
++  if (action == "open_tab") {
++    const std::string url = StringArg(args, "url");
++    if (url.empty()) {
++      std::move(callback).Run("{\"ok\":false,\"error\":\"url vazia\"}");
++      return;
++    }
++    const GURL target(url);
++    if (!target.is_valid() || (target.scheme() != "http" &&
++                               target.scheme() != "https")) {
++      std::move(callback).Run(
++          "{\"ok\":false,\"error\":\"apenas http/https\"}");
++      return;
++    }
++    NavigateParams params(browser, target, ui::PAGE_TRANSITION_TYPED);
++    params.disposition = ui::mojom::WindowOpenDisposition::kNewForegroundTab;
++    Navigate(&params);
++    std::move(callback).Run(base::StrCat({"{\"ok\":true,\"url\":",
++                                          StringToJson(url), "}"}));
++    return;
++  }
++
++  if (action == "list_tabs") {
++    TabStripModel* model = browser->GetTabStripModel();
++    base::ListValue tabs;
++    for (int i = 0; i < model->count(); ++i) {
++      content::WebContents* contents = model->GetWebContentsAt(i);
++      if (!contents) {
++        continue;
++      }
++      base::DictValue tab;
++      tab.Set("index", i);
++      tab.Set("title", base::UTF16ToUTF8(contents->GetTitle()));
++      tab.Set("url", contents->GetLastCommittedURL().possibly_invalid_spec());
++      tab.Set("active", i == model->active_index());
++      tabs.Append(std::move(tab));
++    }
++    base::DictValue result;
++    result.Set("ok", true);
++    result.Set("tabs", std::move(tabs));
++    std::move(callback).Run(DictToJson(result));
++    return;
++  }
++
++  if (action == "switch_tab") {
++    const int index = IntArg(args, "index", -1);
++    if (index >= 0 && index < browser->GetTabStripModel()->count()) {
++      browser->GetTabStripModel()->ActivateTabAt(index);
++      std::move(callback).Run("{\"ok\":true}");
++    } else {
++      std::move(callback).Run("{\"ok\":false,\"error\":\"índice inválido\"}");
++    }
++    return;
++  }
++
++  if (action == "close_tab") {
++    const int index = IntArg(args, "index", -1);
++    if (index >= 0 && index < browser->GetTabStripModel()->count()) {
++      browser->GetTabStripModel()->CloseWebContentsAt(
++          index, CLOSE_USER_GESTURE | CLOSE_CREATE_HISTORICAL_TAB);
++      std::move(callback).Run("{\"ok\":true}");
++    } else {
++      std::move(callback).Run("{\"ok\":false,\"error\":\"índice inválido\"}");
++    }
++    return;
++  }
++
++  content::WebContents* contents = GetActiveWebContents();
++  if (!contents) {
++    std::move(callback).Run("{\"ok\":false,\"error\":\"sem aba ativa\"}");
++    return;
++  }
++
++  if (action == "navigate") {
++    const std::string url = StringArg(args, "url");
++    if (url.empty()) {
++      std::move(callback).Run("{\"ok\":false,\"error\":\"url vazia\"}");
++      return;
++    }
++    const GURL target(url);
++    if (!target.is_valid() || (target.scheme() != "http" &&
++                               target.scheme() != "https")) {
++      std::move(callback).Run(
++          "{\"ok\":false,\"error\":\"apenas http/https\"}");
++      return;
++    }
++    contents->GetController().LoadURL(target, content::Referrer(),
++                                      ui::PAGE_TRANSITION_TYPED,
++                                      std::string());
++    std::move(callback).Run(base::StrCat({"{\"ok\":true,\"url\":",
++                                          StringToJson(url), "}"}));
++    return;
++  }
++
++  if (action == "back") {
++    if (contents->GetController().CanGoBack()) {
++      contents->GetController().GoBack();
++      std::move(callback).Run("{\"ok\":true}");
++    } else {
++      std::move(callback).Run("{\"ok\":false,\"error\":\"sem histórico\"}");
++    }
++    return;
++  }
++
++  if (action == "forward") {
++    if (contents->GetController().CanGoForward()) {
++      contents->GetController().GoForward();
++      std::move(callback).Run("{\"ok\":true}");
++    } else {
++      std::move(callback).Run("{\"ok\":false,\"error\":\"sem histórico\"}");
++    }
++    return;
++  }
++
++  if (action == "reload") {
++    contents->GetController().Reload(content::ReloadType::NORMAL, false);
++    std::move(callback).Run("{\"ok\":true}");
++    return;
++  }
++
++  if (action == "read_page") {
++    const std::u16string script = uR"((function(){
++      try {
++        return JSON.stringify({
++          ok: true,
++          title: document.title,
++          url: location.href,
++          text: (document.body ? document.body.innerText : '').slice(0, 12000)
++        });
++      } catch (e) {
++        return JSON.stringify({ok: false, error: String(e)});
++      }
++    })())";
++    RunJavaScript(script, std::move(callback));
++    return;
++  }
++
++  if (action == "click") {
++    const std::string selector = StringArg(args, "selector");
++    const std::string text = StringArg(args, "text");
++    if (selector.empty() && text.empty()) {
++      std::move(callback).Run(
++          "{\"ok\":false,\"error\":\"informe selector ou text\"}");
++      return;
++    }
++    const std::u16string script =
++        base::UTF8ToUTF16(base::StrCat({R"((function(){
++          const sel = )",
++                                        StringToJson(selector), R"(;
++          const needle = )",
++                                        StringToJson(text), R"(;
++          let el = null;
++          if (sel) { try { el = document.querySelector(sel); } catch (e) {} }
++          if (!el && needle) {
++            const n = needle.toLowerCase();
++            const cands = Array.from(document.querySelectorAll(
++                'a,button,[role="button"],input[type="submit"],input[type="button"]'));
++            el = cands.find(e => ((e.innerText || e.value ||
++                e.getAttribute('aria-label') || '').toLowerCase().trim().includes(n)));
++          }
++          if (!el) return JSON.stringify({ok:false, error:'elemento não encontrado'});
++          el.scrollIntoView({block:'center'});
++          el.click();
++          return JSON.stringify({ok:true, info:(el.innerText || el.tagName || '').slice(0,80)});
++        })())"}));
++    RunJavaScript(script, std::move(callback));
++    return;
++  }
++
++  if (action == "type") {
++    const std::string selector = StringArg(args, "selector");
++    const std::string text = StringArg(args, "text");
++    const bool submit = BoolArg(args, "submit");
++    if (selector.empty()) {
++      std::move(callback).Run(
++          "{\"ok\":false,\"error\":\"informe selector\"}");
++      return;
++    }
++    const std::u16string script = base::UTF8ToUTF16(base::StrCat(
++        {"(function(){const el = document.querySelector(",
++         StringToJson(selector),
++         ");if(!el)return JSON.stringify({ok:false,error:'campo não "
++         "encontrado'});el.focus();const value = ",
++         StringToJson(text),
++         ";if(el.isContentEditable){el.textContent=value;}else{const proto = "
++         "el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : "
++         "HTMLInputElement.prototype;const setter = "
++         "Object.getOwnPropertyDescriptor(proto,'value').set;"
++         "setter.call(el,value);}el.dispatchEvent(new "
++         "Event('input',{bubbles:true}));el.dispatchEvent(new "
++         "Event('change',{bubbles:true}));const shouldSubmit = ",
++         submit ? "true" : "false",
++         ";if(shouldSubmit && el.form){el.form.requestSubmit();}return "
++         "JSON.stringify({ok:true});})()"}));
++    RunJavaScript(script, std::move(callback));
++    return;
++  }
++
++  if (action == "scroll") {
++    const std::string direction = StringArg(args, "direction");
++    const char* delta = direction == "up" ? "-" : "";
++    const std::u16string script =
++        base::UTF8ToUTF16(base::StrCat({"(function(){window.scrollBy(0,",
++                                        delta,
++                                        "window.innerHeight*0.8);return "
++                                        "JSON.stringify({ok:true});})()"}));
++    RunJavaScript(script, std::move(callback));
++    return;
++  }
++
++  std::move(callback).Run("{\"ok\":false,\"error\":\"ação desconhecida\"}");
++}
++
++void GoataiChatHandler::RunJavaScript(
++    const std::u16string& script,
++    base::OnceCallback<void(std::string)> callback) {
++  content::WebContents* contents = GetActiveWebContents();
++  if (!contents || !contents->GetPrimaryMainFrame()) {
++    std::move(callback).Run("{\"ok\":false,\"error\":\"sem aba ativa\"}");
++    return;
++  }
++  contents->GetPrimaryMainFrame()->ExecuteJavaScriptInIsolatedWorld(
++      script,
++      base::BindOnce(
++          [](base::OnceCallback<void(std::string)> callback,
++             base::Value result) {
++            std::string out;
++            if (result.is_string()) {
++              out = result.GetString();
++            } else if (!result.is_none()) {
++              base::JSONWriter::Write(result, &out);
++            }
++            std::move(callback).Run(out.empty() ? "{\"ok\":true}" : out);
++          },
++          std::move(callback)),
++      content::ISOLATED_WORLD_ID_CONTENT_END + 1);
++}
+diff --git a/chrome/browser/ui/webui/goatai_chat/goatai_chat_handler.h b/chrome/browser/ui/webui/goatai_chat/goatai_chat_handler.h
+new file mode 100644
+index 0000000000..b3f38f3a16
+--- /dev/null
++++ b/chrome/browser/ui/webui/goatai_chat/goatai_chat_handler.h
+@@ -0,0 +1,113 @@
++// Copyright 2026 Goatai. All rights reserved.
++// Use of this source code is governed by a BSD-style license.
++
++#ifndef CHROME_BROWSER_UI_WEBUI_GOATAI_CHAT_GOATAI_CHAT_HANDLER_H_
++#define CHROME_BROWSER_UI_WEBUI_GOATAI_CHAT_GOATAI_CHAT_HANDLER_H_
++
++#include <memory>
++#include <string>
++#include <vector>
++
++#include "base/memory/scoped_refptr.h"
++#include "base/memory/weak_ptr.h"
++#include "base/values.h"
++#include "components/os_crypt/async/common/encryptor.h"
++#include "content/public/browser/web_ui_message_handler.h"
++
++class BrowserWindowInterface;
++class PrefService;
++class Profile;
++
++namespace content {
++class WebContents;
++}  // namespace content
++
++namespace network {
++class SimpleURLLoader;
++}  // namespace network
++
++// Backend do painel Goatai IA.
++//
++// Segurança:
++//  - a chave de API é cifrada com OSCrypt (cofre do sistema) e guardada em
++//    base64 nas preferências do perfil;
++//  - a chave nunca é enviada para a página (a UI recebe apenas os 4 últimos
++//    caracteres);
++//  - as requisições HTTP saem do processo do navegador, não do renderer.
++class GoataiChatHandler : public content::WebUIMessageHandler {
++ public:
++  GoataiChatHandler();
++  GoataiChatHandler(const GoataiChatHandler&) = delete;
++  GoataiChatHandler& operator=(const GoataiChatHandler&) = delete;
++  ~GoataiChatHandler() override;
++
++  // content::WebUIMessageHandler:
++  void RegisterMessages() override;
++  void OnJavascriptAllowed() override;
++  void OnJavascriptDisallowed() override;
++
++ private:
++  struct ChatMessage {
++    std::string role;     // "user" ou "assistant"
++    std::string content;
++  };
++
++  // Mensagens vindas da página.
++  void HandleGetState(const base::ListValue& args);
++  void HandleSetProvider(const base::ListValue& args);
++  void HandleSetModel(const base::ListValue& args);
++  void HandleSetControl(const base::ListValue& args);
++  void HandleSaveKey(const base::ListValue& args);
++  void HandleClearKey(const base::ListValue& args);
++  void HandleSend(const base::ListValue& args);
++
++  // Infra.
++  Profile* profile() const;
++  content::WebUI* ui() const;
++  PrefService* prefs() const;
++  void EnsureEncryptor(base::OnceCallback<void(bool)> callback);
++  void Notify(base::DictValue event);
++  void NotifyError(const std::string& message);
++  void NotifyStatus(const std::string& text);
++  void NotifyAction(const std::string& text);
++  void SendState();
++
++  std::string Provider() const;
++  std::string Model() const;
++  std::string DefaultModelFor(const std::string& provider) const;
++  std::string KeyPrefFor(const std::string& provider) const;
++  std::string ModelPrefFor(const std::string& provider) const;
++  std::string StoredKeyPref(const std::string& provider) const;
++  std::string DecryptStoredKey(const std::string& provider) const;
++  std::string MaskKey(const std::string& key) const;
++  bool IsValidProvider(const std::string& provider) const;
++
++  // Conversa / provedor.
++  std::string BuildSystemPrompt() const;
++  std::string BuildRequestBody() const;
++  void AddContextToSystem(std::string* system) const;
++  void SendStep(int step);
++  void OnProviderResponse(int step, std::optional<std::string> body);
++  void HandleModelText(int step, const std::string& text);
++  std::optional<base::DictValue> ParseAction(const std::string& text) const;
++
++  // Ferramentas de navegador.
++  BrowserWindowInterface* GetBrowserWindow() const;
++  content::WebContents* GetActiveWebContents() const;
++  void ExecuteAction(const std::string& action,
++                     const base::DictValue* args,
++                     base::OnceCallback<void(std::string)> callback);
++  void RunJavaScript(const std::u16string& script,
++                     base::OnceCallback<void(std::string)> callback);
++
++  std::string provider_ = "gpt";
++  bool control_enabled_ = true;
++  std::vector<ChatMessage> messages_;
++  scoped_refptr<os_crypt_async::Encryptor> encryptor_;
++  std::unique_ptr<network::SimpleURLLoader> loader_;
++  bool waiting_ = false;
++
++  base::WeakPtrFactory<GoataiChatHandler> weak_factory_{this};
++};
++
++#endif  // CHROME_BROWSER_UI_WEBUI_GOATAI_CHAT_GOATAI_CHAT_HANDLER_H_
+diff --git a/chrome/browser/ui/webui/goatai_chat/goatai_chat_prefs.h b/chrome/browser/ui/webui/goatai_chat/goatai_chat_prefs.h
+new file mode 100644
+index 0000000000..05c172cd25
+--- /dev/null
++++ b/chrome/browser/ui/webui/goatai_chat/goatai_chat_prefs.h
+@@ -0,0 +1,23 @@
++// Copyright 2026 Goatai. All rights reserved.
++// Use of this source code is governed by a BSD-style license.
++
++#ifndef CHROME_BROWSER_UI_WEBUI_GOATAI_CHAT_GOATAI_CHAT_PREFS_H_
++#define CHROME_BROWSER_UI_WEBUI_GOATAI_CHAT_GOATAI_CHAT_PREFS_H_
++
++namespace goatai {
++
++// Provedor selecionado no painel ("gpt", "gemini", "deepseek", "claude").
++inline constexpr char kChatProviderPref[] = "goatai.chat.provider";
++
++// Permite que a IA execute ações no navegador.
++inline constexpr char kChatControlPref[] = "goatai.chat.control";
++
++// Chaves de API cifradas (base64 do ciphertext do OSCrypt) por provedor.
++inline constexpr char kChatKeyPrefPrefix[] = "goatai.chat.key.";
++
++// Modelo escolhido por provedor.
++inline constexpr char kChatModelPrefPrefix[] = "goatai.chat.model.";
++
++}  // namespace goatai
++
++#endif  // CHROME_BROWSER_UI_WEBUI_GOATAI_CHAT_GOATAI_CHAT_PREFS_H_
+diff --git a/chrome/browser/ui/webui/goatai_chat/goatai_chat_ui.cc b/chrome/browser/ui/webui/goatai_chat/goatai_chat_ui.cc
+new file mode 100644
+index 0000000000..b8eb69a01f
+--- /dev/null
++++ b/chrome/browser/ui/webui/goatai_chat/goatai_chat_ui.cc
+@@ -0,0 +1,31 @@
++// Copyright 2026 Goatai. All rights reserved.
++// Use of this source code is governed by a BSD-style license.
++
++#include "chrome/browser/ui/webui/goatai_chat/goatai_chat_ui.h"
++
++#include <memory>
++
++#include "chrome/browser/profiles/profile.h"
++#include "chrome/browser/ui/webui/goatai_chat/goatai_chat_handler.h"
++#include "chrome/common/webui_url_constants.h"
++#include "chrome/grit/browser_resources.h"
++#include "content/public/browser/web_ui.h"
++#include "content/public/browser/web_ui_data_source.h"
++#include "content/public/common/url_constants.h"
++
++GoataiChatUI::GoataiChatUI(content::WebUI* web_ui)
++    : content::WebUIController(web_ui) {
++  Profile* profile = Profile::FromWebUI(web_ui);
++  content::WebUIDataSource* source = content::WebUIDataSource::CreateAndAdd(
++      profile, chrome::kChromeUIGoataiChatHost);
++  source->AddResourcePath("app.js", IDR_GOATAI_CHAT_APP_JS);
++  source->AddResourcePath("app.css", IDR_GOATAI_CHAT_APP_CSS);
++  source->SetDefaultResource(IDR_GOATAI_CHAT_INDEX_HTML);
++  web_ui->AddMessageHandler(std::make_unique<GoataiChatHandler>());
++}
++
++GoataiChatUI::~GoataiChatUI() = default;
++
++GoataiChatUIConfig::GoataiChatUIConfig()
++    : DefaultWebUIConfig(content::kChromeUIScheme,
++                         chrome::kChromeUIGoataiChatHost) {}
+diff --git a/chrome/browser/ui/webui/goatai_chat/goatai_chat_ui.h b/chrome/browser/ui/webui/goatai_chat/goatai_chat_ui.h
+new file mode 100644
+index 0000000000..7599e36c3f
+--- /dev/null
++++ b/chrome/browser/ui/webui/goatai_chat/goatai_chat_ui.h
+@@ -0,0 +1,28 @@
++// Copyright 2026 Goatai. All rights reserved.
++// Use of this source code is governed by a BSD-style license.
++
++#ifndef CHROME_BROWSER_UI_WEBUI_GOATAI_CHAT_GOATAI_CHAT_UI_H_
++#define CHROME_BROWSER_UI_WEBUI_GOATAI_CHAT_GOATAI_CHAT_UI_H_
++
++#include "content/public/browser/web_ui_controller.h"
++#include "content/public/browser/webui_config.h"
++
++namespace content {
++class WebUI;
++}
++
++// WebUI do painel lateral de IA (chrome://goatai-chat).
++class GoataiChatUI : public content::WebUIController {
++ public:
++  explicit GoataiChatUI(content::WebUI* web_ui);
++  GoataiChatUI(const GoataiChatUI&) = delete;
++  GoataiChatUI& operator=(const GoataiChatUI&) = delete;
++  ~GoataiChatUI() override;
++};
++
++class GoataiChatUIConfig : public content::DefaultWebUIConfig<GoataiChatUI> {
++ public:
++  GoataiChatUIConfig();
++};
++
++#endif  // CHROME_BROWSER_UI_WEBUI_GOATAI_CHAT_GOATAI_CHAT_UI_H_
+diff --git a/chrome/common/webui_url_constants.h b/chrome/common/webui_url_constants.h
+index 110a53af00..cd091b08ae 100644
+--- a/chrome/common/webui_url_constants.h
++++ b/chrome/common/webui_url_constants.h
+@@ -424,6 +424,8 @@ inline constexpr char kChromeUIOnDeviceInternalsHost[] = "on-device-internals";
+ inline constexpr char kChromeUIReadLaterHost[] = "read-later.top-chrome";
+ inline constexpr char kChromeUIReadLaterURL[] =
+     "chrome://read-later.top-chrome/";
++inline constexpr char kChromeUIGoataiChatHost[] = "goatai-chat";
++inline constexpr char kChromeUIGoataiChatURL[] = "chrome://goatai-chat/";
+ inline constexpr char kChromeUISearchEngineChoiceHost[] =
+     "search-engine-choice";
+ inline constexpr char kChromeUISearchEngineChoiceURL[] =
 diff --git a/chrome/installer/linux/common/chromium-browser.info b/chrome/installer/linux/common/chromium-browser.info
 index 694581fc82..d85d25968f 100644
 --- a/chrome/installer/linux/common/chromium-browser.info

@@ -8,4 +8,5 @@ unset CHROME_DESKTOP
 "$ROOT/scripts/install-extensions.sh"
 PROFILE="${GOATAI_USER_DATA_DIR:-$ROOT/.run/profile}"
 mkdir -p "$PROFILE"
-exec "$BIN" --user-data-dir="$PROFILE" --no-first-run --no-default-browser-check "$@"
+exec "$BIN" --load-extension="$ROOT/extensions/goatai_ai" \
+  --user-data-dir="$PROFILE" --no-first-run --no-default-browser-check "$@"

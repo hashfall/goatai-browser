@@ -29,7 +29,7 @@ Type=Application
 Name=Goatai
 GenericName=Web Browser
 Comment=Navegador Goatai baseado em Chromium
-Exec=env CHROME_DESKTOP=goatai.desktop "$BIN" --user-data-dir="$PROFILE" --no-first-run --no-default-browser-check %U
+Exec=env CHROME_DESKTOP=goatai.desktop "$BIN" --load-extension="$ROOT/extensions/goatai_ai" --user-data-dir="$PROFILE" --no-first-run --no-default-browser-check %U
 Icon=goatai
 Terminal=false
 Categories=Network;WebBrowser;
